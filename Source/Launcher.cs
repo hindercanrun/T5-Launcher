@@ -39,11 +39,15 @@ namespace LauncherCS
 
     public static string CanonicalDirectory(string path, bool createIfMissing = true)
     {
-      FileInfo fileInfo = new FileInfo(path + "." + (object) Path.DirectorySeparatorChar);
-      if (createIfMissing)
-        Launcher.MakeDirectory(fileInfo.DirectoryName);
-      return fileInfo.DirectoryName + (object) Path.DirectorySeparatorChar;
-    }
+			string fullPath = Path.GetFullPath(path);
+			MakeDirectory(fullPath);
+
+			if (!fullPath.EndsWith(Path.DirectorySeparatorChar.ToString()))
+			{
+				fullPath += Path.DirectorySeparatorChar.ToString();
+			}
+			return fullPath;
+		}
 
     public static bool CopyFile(string sourceFileName, string destinationFileName)
     {

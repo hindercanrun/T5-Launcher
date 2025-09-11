@@ -52,22 +52,22 @@
     <Compile Include="Settings.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="Launcher.cs" />
-    <Compile Include="CreateMapForm.cs">
+    <Compile Include="Forms\CreateMapForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="ZoneSourceForm.cs">
+    <Compile Include="Forms\ZoneSourceForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="CreateModForm.cs">
+    <Compile Include="Forms\CreateModForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="LightOptionsForm.cs">
+    <Compile Include="Forms\LightOptionsForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="BspOptionsForm.cs">
+    <Compile Include="Forms\BspOptionsForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="LauncherForm.cs">
+    <Compile Include="Forms\LauncherForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Properties\Settings.cs" />
@@ -75,22 +75,19 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="CreateModForm.resx">
+    <EmbeddedResource Include="Forms\CreateModForm.resx">
       <DependentUpon>CreateModForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="LauncherForm.resx">
+    <EmbeddedResource Include="Forms\LauncherForm.resx">
       <DependentUpon>LauncherForm.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Icon3.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="app.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
