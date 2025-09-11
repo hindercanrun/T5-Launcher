@@ -17,9 +17,9 @@ namespace Launcher
   internal static class Launcher
   {
     public static MainWindow TheLauncherForm = (MainWindow) null;
-    public static Settings launcherSettings = new Settings();
-    public static Settings mapSettings = new Settings();
-    public static Settings modSettings;
+    public static Utils.Settings launcherSettings = new Utils.Settings();
+    public static Utils.Settings mapSettings = new Utils.Settings();
+    public static Utils.Settings modSettings;
     private static bool use_exedir_as_startupdir = true;
 
     static Launcher() => Launcher.launcherSettings.Set(Launcher.LoadLauncherSettings());

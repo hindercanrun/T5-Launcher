@@ -48,7 +48,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Settings.cs" />
+    <Compile Include="Utils\Settings.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="Launcher.cs" />
     <Compile Include="Forms\CreateMap.cs">

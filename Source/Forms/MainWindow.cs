@@ -206,7 +206,10 @@ namespace Launcher
 			if (m.Msg == NativeMethods.WM_SHOWME)
 			{
 				if (WindowState == FormWindowState.Minimized)
+				{
 					WindowState = FormWindowState.Normal;
+				}
+
 				bool topMost = TopMost;
 				TopMost = true;
 				TopMost = topMost;
