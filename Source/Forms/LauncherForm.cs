@@ -2753,7 +2753,7 @@ namespace Launcher
 
 		private void LauncherCompileBSPButton_Click(object sender, EventArgs e)
     {
-      int num = (int) new LightOptionsForm().ShowDialog();
+      int num = (int) new LightOptions().ShowDialog();
     }
 
     private void LauncherCompileLevelButton_Click(object sender, EventArgs e)
