@@ -2763,7 +2763,7 @@ namespace Launcher
 
     private void LauncherCompileLightsButton_Click(object sender, EventArgs e)
     {
-      int num = (int) new BspOptionsForm().ShowDialog();
+      int num = (int) new BspOptions().ShowDialog();
     }
 
     private void LauncherCompileLightsCheckBox_CheckedChanged(object sender, EventArgs e)

@@ -64,7 +64,7 @@
     <Compile Include="Forms\LightOptionsForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\BspOptionsForm.cs">
+    <Compile Include="Forms\BspOptions.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\LauncherForm.cs">
