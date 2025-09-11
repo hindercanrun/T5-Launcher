@@ -123,7 +123,7 @@ namespace Launcher
 			Close();
 
 			// Set tabs
-			Launcher.TheLauncherForm.SetLauncherTab(LauncherForm.LauncherTabType.Mods);
+			Launcher.TheLauncherForm.SetLauncherTab(MainWindow.LauncherTabType.Mods);
 			Launcher.TheLauncherForm.SetModSelection(text, true);
 		}
 	}

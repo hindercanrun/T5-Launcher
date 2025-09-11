@@ -16,7 +16,7 @@ namespace Launcher
 {
   internal static class Launcher
   {
-    public static LauncherForm TheLauncherForm = (LauncherForm) null;
+    public static MainWindow TheLauncherForm = (MainWindow) null;
     public static Settings launcherSettings = new Settings();
     public static Settings mapSettings = new Settings();
     public static Settings modSettings;
@@ -630,7 +630,7 @@ namespace Launcher
       {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run((Form) (Launcher.TheLauncherForm = new LauncherForm()));
+        Application.Run((Form) (Launcher.TheLauncherForm = new MainWindow()));
       }
     }
 

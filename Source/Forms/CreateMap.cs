@@ -173,7 +173,7 @@ namespace Launcher
 
 				// Set the selection and stuff
 				Launcher.TheLauncherForm.SetMapSelection(text, true);
-				Launcher.TheLauncherForm.SetLauncherTab(LauncherForm.LauncherTabType.Maps);
+				Launcher.TheLauncherForm.SetLauncherTab(MainWindow.LauncherTabType.Maps);
 			}
 
 			DialogResult = DialogResult.OK;
