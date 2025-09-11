@@ -52,7 +52,7 @@
     <Compile Include="Settings.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="Launcher.cs" />
-    <Compile Include="Forms\CreateMapForm.cs">
+    <Compile Include="Forms\CreateMap.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\ZoneSourceForm.cs">

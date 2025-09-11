@@ -2701,7 +2701,7 @@ namespace Launcher
 
     private void LauncherButtonCreateMap_Click(object sender, EventArgs e)
     {
-      if (new CreateMapForm().ShowDialog() != DialogResult.OK)
+      if (new CreateMap().ShowDialog() != DialogResult.OK)
         return;
       this.UpdateMapList();
       this.EnableMapList();
@@ -2773,7 +2773,7 @@ namespace Launcher
 
     private void LauncherCreateMap_Click(object sender, EventArgs e)
     {
-      if (new CreateMapForm().ShowDialog() != DialogResult.OK)
+      if (new CreateMap().ShowDialog() != DialogResult.OK)
         return;
       this.UpdateMapList();
       this.EnableMapList();
@@ -3232,7 +3232,7 @@ namespace Launcher
 
     private void LaunchernewMapToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      if (new CreateMapForm().ShowDialog() != DialogResult.OK)
+      if (new CreateMap().ShowDialog() != DialogResult.OK)
         return;
       this.UpdateMapList();
       this.EnableMapList();
