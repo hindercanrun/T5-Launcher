@@ -20,19 +20,6 @@ namespace Launcher
     public static Settings launcherSettings = new Settings();
     public static Settings mapSettings = new Settings();
     public static Settings modSettings;
-    public static DVar[] dvars = new DVar[10]
-    {
-      new DVar("devmap", "Loads map"),
-      new DVar("thereisacow", "Enables Cheats", 0M, 1M),
-      new DVar("developer", "Used to give more debug", 0M, 2M),
-      new DVar("developer_script", "Used to give more script debug", 0M, 1M),
-      new DVar("logfile", "Spits out a console.log", 0M, 2M),
-      new DVar("com_introplayed", "Skips the intro movies", 0M, 1M),
-      new DVar("sv_pure", "Determines if the game will use the shipped iwd files only", 0M, 1M),
-      new DVar("r_fullscreen", "Enables fullscreen", 0M, 1M),
-      new DVar("sv_punkbuster", "Toggles the use of PunkBuster", 0M, 2M),
-      new DVar("scr_testclients", "How many test bots do you want?", 0M, 10M)
-    };
     private static bool use_exedir_as_startupdir = true;
 
     static Launcher() => Launcher.launcherSettings.Set(Launcher.LoadLauncherSettings());
