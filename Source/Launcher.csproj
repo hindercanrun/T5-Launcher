@@ -55,7 +55,7 @@
     <Compile Include="Forms\CreateMap.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\ZoneSourceForm.cs">
+    <Compile Include="Forms\ZoneSource.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\CreateMod.cs">

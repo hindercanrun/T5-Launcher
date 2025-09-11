@@ -2798,7 +2798,7 @@ namespace Launcher
 
     private void LauncherEditZoneSourceButton_Click(object sender, EventArgs e)
     {
-      int num = (int) new ZoneSourceForm(this.LauncherModComboBox.SelectedItem.ToString()).ShowDialog();
+      int num = (int) new ZoneSource(this.LauncherModComboBox.SelectedItem.ToString()).ShowDialog();
     }
 
     private void LauncherErrorsNumericUpDown_ValueChanged(object sender, EventArgs e)
