@@ -1,5 +1,5 @@
 ﻿// Decompiled with JetBrains decompiler
-// Type: LauncherCS.ZoneSourceForm
+// Type: ZoneSourceForm
 // Assembly: Launcher, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null
 // MVID: BE2EDF30-BDA3-4FE0-9EFC-B0A1BE215D80
 // Assembly location: D:\SteamLibrary\steamapps\common\Call of Duty Black Ops\bin\Launcher.exe
@@ -10,7 +10,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
-namespace LauncherCS
+namespace Launcher
 {
   public class ZoneSourceForm : Form
   {

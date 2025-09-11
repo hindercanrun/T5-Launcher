@@ -1,11 +1,11 @@
 ﻿// Decompiled with JetBrains decompiler
-// Type: LauncherCS.LauncherForm
+// Type: LauncherForm
 // Assembly: Launcher, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null
 // MVID: BE2EDF30-BDA3-4FE0-9EFC-B0A1BE215D80
 // Assembly location: D:\SteamLibrary\steamapps\common\Call of Duty Black Ops\bin\Launcher.exe
 
 using Launcher.Properties;
-using LauncherCS.Properties;
+using Properties;
 using Properties;
 using System;
 using System.Collections;
@@ -20,7 +20,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Forms.Layout;
 
-namespace LauncherCS
+namespace Launcher
 {
   public class LauncherForm : Form
   {
@@ -296,11 +296,11 @@ namespace LauncherCS
     {
       this.EnableControls(false);
       string path2 = this.mapName + ".grid";
-      LauncherCS.Launcher.CopyFile(Path.Combine(LauncherCS.Launcher.GetMapSourceDirectory(), path2), Path.Combine(LauncherCS.Launcher.GetRawMapsDirectory(), Path.Combine(this.IsMP() ? "mp" : "", path2)));
+      Launcher.CopyFile(Path.Combine(Launcher.GetMapSourceDirectory(), path2), Path.Combine(Launcher.GetRawMapsDirectory(), Path.Combine(this.IsMP() ? "mp" : "", path2)));
       LauncherForm.ProcessFinishedDelegate nextStage = new LauncherForm.ProcessFinishedDelegate(this.BuildGridFinishedDelegate);
-      string gameApplication = LauncherCS.Launcher.GetGameApplication(this.IsMP());
+      string gameApplication = Launcher.GetGameApplication(this.IsMP());
       string str1 = "raw";
-      string str2 = "+set developer 1 +set logfile 2 + set r_vc_makelog " + r_vc_makelog.ToString() + "+set r_vc_showlog 16 +set r_cullxmodel " + (LauncherCS.Launcher.mapSettings.GetBoolean("compile_collectdots") ? "0" : "1") + " +set thereisacow 1960 +set com_introplayed 1 +set fs_game " + str1;
+      string str2 = "+set developer 1 +set logfile 2 + set r_vc_makelog " + r_vc_makelog.ToString() + "+set r_vc_showlog 16 +set r_cullxmodel " + (Launcher.mapSettings.GetBoolean("compile_collectdots") ? "0" : "1") + " +set thereisacow 1960 +set com_introplayed 1 +set fs_game " + str1;
       string processOptions = (!(str1 == "raw") ? str2 + " +set fs_usedevdir 1" : str2 + " +set fs_useFastFile 0 +set fs_usedevdir 1") + "+devmap " + this.mapName;
       this.LaunchProcessHelper(true, nextStage, (Process) null, gameApplication, processOptions);
     }
@@ -308,7 +308,7 @@ namespace LauncherCS
     private void BuildGridFinishedDelegate(Process lastProcess)
     {
       string path2 = this.mapName + ".grid";
-      LauncherCS.Launcher.MoveFile(Path.Combine(LauncherCS.Launcher.GetRawMapsDirectory(), Path.Combine(this.IsMP() ? "mp" : "", path2)), Path.Combine(LauncherCS.Launcher.GetMapSourceDirectory(), path2));
+      Launcher.MoveFile(Path.Combine(Launcher.GetRawMapsDirectory(), Path.Combine(this.IsMP() ? "mp" : "", path2)), Path.Combine(Launcher.GetMapSourceDirectory(), path2));
       this.EnableControls(true);
     }
 
@@ -319,11 +319,11 @@ namespace LauncherCS
 
     private bool CheckZoneSourceFiles()
     {
-      if (File.Exists(LauncherCS.Launcher.GetZoneSourceFile(this.mapName)))
+      if (File.Exists(Launcher.GetZoneSourceFile(this.mapName)))
         return true;
       if (MessageBox.Show("There are no zone files for " + this.mapName + ". Would you like to create them?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.No)
         return false;
-      LauncherCS.Launcher.CreateZoneSourceFiles(this.mapName);
+      Launcher.CreateZoneSourceFiles(this.mapName);
       return true;
     }
 
@@ -337,7 +337,7 @@ namespace LauncherCS
     private void CompileLevelBspDelegate(Process lastProcess)
     {
       LauncherForm.ProcessFinishedDelegate nextStage = new LauncherForm.ProcessFinishedDelegate(this.CompileLevelVisDelegate);
-      LauncherCS.Launcher.DeleteFile(this.GetSourceBsp() + ".lin", false);
+      Launcher.DeleteFile(this.GetSourceBsp() + ".lin", false);
       string[] strArray = new string[9]
       {
         "-platform pc ",
@@ -345,7 +345,7 @@ namespace LauncherCS
         this.GetSourceBsp(),
         ".map\"",
         " ",
-        LauncherCS.Launcher.GetBspOptions(),
+        Launcher.GetBspOptions(),
         " \"",
         this.GetDestinationBsp(),
         "\""
@@ -358,7 +358,7 @@ namespace LauncherCS
       string[] strArray = new string[5]
       {
         "-platform pc ",
-        LauncherCS.Launcher.GetLightOptions(),
+        Launcher.GetLightOptions(),
         "\"",
         this.GetDestinationBsp(),
         "\""
@@ -376,8 +376,8 @@ namespace LauncherCS
       Process lastProcess,
       LauncherForm.ProcessFinishedDelegate nextStage)
     {
-      string str = LauncherCS.Launcher.mapSettings.GetBoolean("compile_modenabled") ? "-moddir " + LauncherCS.Launcher.mapSettings.GetString("compile_modname") + " " : "";
-      this.CompileLevelHelper("compile_buildffs", nextStage, lastProcess, "linker_pc", "-nopause -language " + LauncherCS.Launcher.GetLanguage() + " " + str + name + (File.Exists(LauncherCS.Launcher.GetLoadZone(this.mapName)) ? " " + LauncherCS.Launcher.GetLoadZone(this.mapName) : ""));
+      string str = Launcher.mapSettings.GetBoolean("compile_modenabled") ? "-moddir " + Launcher.mapSettings.GetString("compile_modname") + " " : "";
+      this.CompileLevelHelper("compile_buildffs", nextStage, lastProcess, "linker_pc", "-nopause -language " + Launcher.GetLanguage() + " " + str + name + (File.Exists(Launcher.GetLoadZone(this.mapName)) ? " " + Launcher.GetLoadZone(this.mapName) : ""));
     }
 
     private void CompileLevelCleanupDelegate(Process lastProcess)
@@ -391,7 +391,7 @@ namespace LauncherCS
         ".grid"
       };
       foreach (string str in strArray)
-        LauncherCS.Launcher.DeleteFile(this.GetDestinationBsp() + str, false);
+        Launcher.DeleteFile(this.GetDestinationBsp() + str, false);
       this.CompileLevelPathsDelegate(lastProcess);
     }
 
@@ -420,7 +420,7 @@ namespace LauncherCS
       string processOptions,
       string workingDirectory)
     {
-      this.LaunchProcessHelper(LauncherCS.Launcher.mapSettings.GetBoolean(mapSettingsOption), nextStage, lastProcess, processName, processOptions, workingDirectory);
+      this.LaunchProcessHelper(Launcher.mapSettings.GetBoolean(mapSettingsOption), nextStage, lastProcess, processName, processOptions, workingDirectory);
     }
 
     private void CompileLevelHelper(
@@ -430,38 +430,38 @@ namespace LauncherCS
       string processName,
       string processOptions)
     {
-      this.LaunchProcessHelper(LauncherCS.Launcher.mapSettings.GetBoolean(mapSettingsOption), nextStage, lastProcess, processName, processOptions);
+      this.LaunchProcessHelper(Launcher.mapSettings.GetBoolean(mapSettingsOption), nextStage, lastProcess, processName, processOptions);
     }
 
     private void CompileLevelMoveFastFilesDelegate(Process lastProcess)
     {
-      string zoneDirectory = LauncherCS.Launcher.GetZoneDirectory();
-      string path1 = LauncherCS.Launcher.mapSettings.GetBoolean("compile_modenabled") ? LauncherCS.Launcher.GetModDirectory(LauncherCS.Launcher.mapSettings.GetString("compile_modname")) : Path.Combine(LauncherCS.Launcher.GetUsermapsDirectory(), this.mapName);
+      string zoneDirectory = Launcher.GetZoneDirectory();
+      string path1 = Launcher.mapSettings.GetBoolean("compile_modenabled") ? Launcher.GetModDirectory(Launcher.mapSettings.GetString("compile_modname")) : Path.Combine(Launcher.GetUsermapsDirectory(), this.mapName);
       string path2_1 = this.mapName + ".ff";
       string path2_2 = this.mapName + "_load.ff";
-      LauncherCS.Launcher.MoveFile(Path.Combine(zoneDirectory, path2_1), Path.Combine(path1, path2_1));
-      LauncherCS.Launcher.MoveFile(Path.Combine(zoneDirectory, "localized_" + path2_1), Path.Combine(path1, "localized_" + path2_1));
-      LauncherCS.Launcher.MoveFile(Path.Combine(zoneDirectory, path2_2), Path.Combine(path1, path2_2));
-      LauncherCS.Launcher.Publish();
+      Launcher.MoveFile(Path.Combine(zoneDirectory, path2_1), Path.Combine(path1, path2_1));
+      Launcher.MoveFile(Path.Combine(zoneDirectory, "localized_" + path2_1), Path.Combine(path1, "localized_" + path2_1));
+      Launcher.MoveFile(Path.Combine(zoneDirectory, path2_2), Path.Combine(path1, path2_2));
+      Launcher.Publish();
       this.CompileLevelRunGameDelegate(lastProcess);
     }
 
     private void CompileLevelPathsDelegate(Process lastProcess)
     {
-      this.CompileLevelHelper("compile_paths", new LauncherForm.ProcessFinishedDelegate(this.CompileLevelReflectionsDelegate), lastProcess, LauncherCS.Launcher.GetGameTool(this.IsMP()), "allowdupe +set developer 1 +set logfile 2 +set thereisacow 1960 +set com_introplayed 1 +set r_fullscreen 0 +set fs_usedevdir 1 +set g_connectpaths 2 +set useFastFile 0 +devmap " + this.mapName);
+      this.CompileLevelHelper("compile_paths", new LauncherForm.ProcessFinishedDelegate(this.CompileLevelReflectionsDelegate), lastProcess, Launcher.GetGameTool(this.IsMP()), "allowdupe +set developer 1 +set logfile 2 +set thereisacow 1960 +set com_introplayed 1 +set r_fullscreen 0 +set fs_usedevdir 1 +set g_connectpaths 2 +set useFastFile 0 +devmap " + this.mapName);
     }
 
     private void CompileLevelReflectionsDelegate(Process lastProcess)
     {
-      this.CompileLevelHelper("compile_reflections", new LauncherForm.ProcessFinishedDelegate(this.CompileLevelBspInfoDelegate), lastProcess, LauncherCS.Launcher.GetGameTool(this.IsMP()), "allowdupe +set developer 1 +set logfile 2 +set thereisacow 1960 +set com_introplayed 1 +set r_fullscreen 0 +set fs_usedevdir 1 +set ui_autoContinue 1 +set r_reflectionProbeGenerateExit 1 +set useFastFile 0 +set r_fullscreen 0 +set r_reflectionProbeRegenerateAll 1 +set r_zFeather 1 +set r_reflectionProbeGenerate 1 +devmap " + this.mapName);
+      this.CompileLevelHelper("compile_reflections", new LauncherForm.ProcessFinishedDelegate(this.CompileLevelBspInfoDelegate), lastProcess, Launcher.GetGameTool(this.IsMP()), "allowdupe +set developer 1 +set logfile 2 +set thereisacow 1960 +set com_introplayed 1 +set r_fullscreen 0 +set fs_usedevdir 1 +set ui_autoContinue 1 +set r_reflectionProbeGenerateExit 1 +set useFastFile 0 +set r_fullscreen 0 +set r_reflectionProbeRegenerateAll 1 +set r_zFeather 1 +set r_reflectionProbeGenerate 1 +devmap " + this.mapName);
     }
 
     private void CompileLevelRunGameDelegate(Process lastProcess)
     {
-      string str = LauncherCS.Launcher.mapSettings.GetBoolean("compile_modenabled") ? "\"mods/" + LauncherCS.Launcher.mapSettings.GetString("compile_modname") + "\"" : "raw";
+      string str = Launcher.mapSettings.GetBoolean("compile_modenabled") ? "\"mods/" + Launcher.mapSettings.GetString("compile_modname") + "\"" : "raw";
       LauncherForm.ProcessFinishedDelegate nextStage = new LauncherForm.ProcessFinishedDelegate(this.CompileLevelFinished);
       Process lastProcess1 = lastProcess;
-      string gameApplication = LauncherCS.Launcher.GetGameApplication(this.IsMP());
+      string gameApplication = Launcher.GetGameApplication(this.IsMP());
       string[] strArray1 = new string[7];
       strArray1[0] = "+set useFastFile 1 +set fs_usedevdir 1 +set logfile 2 +set thereisacow 1960 +set com_introplayed 1 ";
       string[] strArray2 = strArray1;
@@ -536,7 +536,7 @@ namespace LauncherCS
 
     private void exporterTutorialToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      Process.Start(LauncherCS.Launcher.GetRootDirectory() + "/bin/maya/tutorial/trashcan_metal/Treyarch_trashcan_metal_directions01sm.pdf");
+      Process.Start(Launcher.GetRootDirectory() + "/bin/maya/tutorial/trashcan_metal/Treyarch_trashcan_metal_directions01sm.pdf");
     }
 
     public int FindLauncherConsoleText(string text, int start, int end)
@@ -574,12 +574,12 @@ namespace LauncherCS
 
     private void gameDirToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      Process.Start(LauncherCS.Launcher.GetRootDirectory());
+      Process.Start(Launcher.GetRootDirectory());
     }
 
     private string GetDestinationBsp()
     {
-      return LauncherCS.Launcher.GetRawMapsDirectory() + (this.IsMP() ? "mp\\" : "") + this.mapName;
+      return Launcher.GetRawMapsDirectory() + (this.IsMP() ? "mp\\" : "") + this.mapName;
     }
 
     private string GetFS_Game(bool allowRaw = false)
@@ -595,7 +595,7 @@ namespace LauncherCS
       return fsGame.Length != 0 ? "+set fs_game " + fsGame + " " + this.FormatDvars() : this.FormatDvars();
     }
 
-    private string GetSourceBsp() => LauncherCS.Launcher.GetMapSourceDirectory() + this.mapName;
+    private string GetSourceBsp() => Launcher.GetMapSourceDirectory() + this.mapName;
 
     private void HashTableToTreeView(Hashtable ht, TreeNodeCollection tree)
     {
@@ -781,6 +781,7 @@ namespace LauncherCS
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.renameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherSplitter)).BeginInit();
 			this.LauncherSplitter.Panel1.SuspendLayout();
 			this.LauncherSplitter.Panel2.SuspendLayout();
 			this.LauncherSplitter.SuspendLayout();
@@ -1107,7 +1108,7 @@ namespace LauncherCS
 			// 
 			// LauncherIconMP
 			// 
-			this.LauncherIconMP.BackgroundImage = global::LauncherCS.Properties.Resources.icon_mp;
+			this.LauncherIconMP.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconMP.BackgroundImage")));
 			this.LauncherIconMP.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
 			this.LauncherIconMP.Enabled = false;
 			this.LauncherIconMP.Location = new System.Drawing.Point(85, 39);
@@ -2622,6 +2623,7 @@ namespace LauncherCS
 			this.LauncherSplitter.Panel1.PerformLayout();
 			this.LauncherSplitter.Panel2.ResumeLayout(false);
 			this.LauncherSplitter.Panel2.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherSplitter)).EndInit();
 			this.LauncherSplitter.ResumeLayout(false);
 			this.panel1.ResumeLayout(false);
 			this.LauncherRunGameCustomCommandLineGroupBox.ResumeLayout(false);
@@ -2677,7 +2679,7 @@ namespace LauncherCS
 
     }
 
-    private bool IsMP() => LauncherCS.Launcher.IsMP(this.mapName);
+    private bool IsMP() => Launcher.IsMP(this.mapName);
 
     private void LauncherButtonAssetManager_Click(object sender, EventArgs e)
     {
@@ -2717,12 +2719,12 @@ namespace LauncherCS
         arguments += "+set developer 1 +set developer_script 1 ";
       if (this.LauncherGameLogfileBox.Checked)
         arguments += "+set logfile 1 ";
-      this.LaunchProcess(LauncherCS.Launcher.GetGameApplication(true), arguments, (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
+      this.LaunchProcess(Launcher.GetGameApplication(true), arguments, (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
     }
 
     private void LauncherButtonRadiant_Click(object sender, EventArgs e)
     {
-      this.LaunchProcess("CoDBORadiant", this.mapName != null ? Path.Combine(LauncherCS.Launcher.GetMapSourceDirectory(), this.mapName + ".map") : "", (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
+      this.LaunchProcess("CoDBORadiant", this.mapName != null ? Path.Combine(Launcher.GetMapSourceDirectory(), this.mapName + ".map") : "", (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
     }
 
     private void LauncherButtonRunConverter_Click(object sender, EventArgs eventArgs)
@@ -2737,15 +2739,15 @@ namespace LauncherCS
         arguments += "+set developer 1";
       if (this.LauncherGameLogfileBox.Checked)
         arguments += "+set logfile 1 ";
-      this.LaunchProcess(LauncherCS.Launcher.GetGameApplication(false), arguments, (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
+      this.LaunchProcess(Launcher.GetGameApplication(false), arguments, (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
     }
 
 		private void LauncherClearConsoleButton_Click(object sender, EventArgs e)
 		{
 			LauncherErrorsCounter.Text = "0";
-			LauncherErrorsPictureBox.BackgroundImage = Properties.Resources.error_grey;
+			//LauncherErrorsPictureBox.BackgroundImage = Properties.Resources.error_grey;
 			LauncherWarningsCounter.Text = "0";
-			LauncherWarningsPictureBox.BackgroundImage = Properties.Resources.warning_grey;
+			//LauncherWarningsPictureBox.BackgroundImage = Properties.Resources.warning_grey;
 			LauncherConsole.Clear();
 		}
 
@@ -2766,7 +2768,7 @@ namespace LauncherCS
 
     private void LauncherCompileLightsCheckBox_CheckedChanged(object sender, EventArgs e)
     {
-      LauncherCS.Launcher.mapSettings.SetDecimal("lightoptions_quality", 20M);
+      Launcher.mapSettings.SetDecimal("lightoptions_quality", 20M);
     }
 
     private void LauncherCreateMap_Click(object sender, EventArgs e)
@@ -2779,15 +2781,15 @@ namespace LauncherCS
 
     private void LauncherDeleteMap_Click(object sender, EventArgs e)
     {
-      string[] mapFiles1 = LauncherCS.Launcher.GetMapFiles(this.mapName);
-      if (DialogResult.Yes != MessageBox.Show("The following files would be deleted:\n\n" + LauncherCS.Launcher.StringArrayToString(mapFiles1), "Are you sure you want to delete these files?", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation))
+      string[] mapFiles1 = Launcher.GetMapFiles(this.mapName);
+      if (DialogResult.Yes != MessageBox.Show("The following files would be deleted:\n\n" + Launcher.StringArrayToString(mapFiles1), "Are you sure you want to delete these files?", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation))
         return;
       foreach (string fileName in mapFiles1)
-        LauncherCS.Launcher.DeleteFile(fileName);
-      string[] mapFiles2 = LauncherCS.Launcher.GetMapFiles(this.mapName);
+        Launcher.DeleteFile(fileName);
+      string[] mapFiles2 = Launcher.GetMapFiles(this.mapName);
       if (mapFiles2.Length != 0)
       {
-        int num = (int) MessageBox.Show("Could not delete the following files:\n\n" + LauncherCS.Launcher.StringArrayToString(mapFiles2), "Error deleting files", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+        int num = (int) MessageBox.Show("Could not delete the following files:\n\n" + Launcher.StringArrayToString(mapFiles2), "Error deleting files", MessageBoxButtons.OK, MessageBoxIcon.Hand);
       }
       this.UpdateMapList();
       this.EnableMapList();
@@ -2813,142 +2815,142 @@ namespace LauncherCS
 
     private void LauncherExploreBlopsDirConfigsButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "players\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "players\\");
     }
 
     private void LauncherExploreBlopsDirGameButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory());
+      this.ExploreOpenDir(Launcher.GetRootDirectory());
     }
 
     private void LauncherExploreBlopsDirModsButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "mods\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "mods\\");
     }
 
     private void LauncherExploreDevDirBinButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "bin\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "bin\\");
     }
 
     private void LauncherExploreDevDirMapSrcButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "map_source\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "map_source\\");
     }
 
     private void LauncherExploreDevDirModelExportButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "model_export\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "model_export\\");
     }
 
     private void LauncherExploreDevDirRawButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\");
     }
 
     private void LauncherExploreDevDirSrcDataButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "source_data\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "source_data\\");
     }
 
     private void LauncherExploreDevDirTextureAssetsButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "texture_assets\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "texture_assets\\");
     }
 
     private void LauncherExploreDevDirZoneSourceButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "zone_source\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "zone_source\\");
     }
 
     private void LauncherExploreRawDirAnimTreesButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\animtrees\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\animtrees\\");
     }
 
     private void LauncherExploreRawDirCSCButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\clientscripts\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\clientscripts\\");
     }
 
     private void LauncherExploreRawDirFXButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\fx\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\fx\\");
     }
 
     private void LauncherExploreRawDirGSCButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\maps\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\");
     }
 
     private void LauncherExploreRawDirLocsButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\english\\localizedstrings\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\english\\localizedstrings\\");
     }
 
     private void LauncherExploreRawDirMPButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\mp\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\mp\\");
     }
 
     private void LauncherExploreRawDirSoundAliasesButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\soundaliases\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\soundaliases\\");
     }
 
     private void LauncherExploreRawDirVisionButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\vision\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\vision\\");
     }
 
     private void LauncherExploreRawDirWeaponsButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\weapons\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\weapons\\");
     }
 
     private void LauncherExploreRawGSCDirMPArtButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\maps\\mp\\createart\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\mp\\createart\\");
     }
 
     private void LauncherExploreRawGSCDirMPButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\maps\\mp\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\mp\\");
     }
 
     private void LauncherExploreRawGSCDirMPFXButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\maps\\mp\\createfx\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\mp\\createfx\\");
     }
 
     private void LauncherExploreRawGSCDirMPGametypesButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\maps\\mp\\gametypes\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\mp\\gametypes\\");
     }
 
     private void LauncherExploreRawGSCDirSPArtButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\maps\\createart\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\createart\\");
     }
 
     private void LauncherExploreRawGSCDirSPButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\maps\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\");
     }
 
     private void LauncherExploreRawGSCDirSPFXButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\maps\\createfx\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\createfx\\");
     }
 
     private void LauncherExploreRawGSCDirSPGametypesButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\maps\\gametypes\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\gametypes\\");
     }
 
     private void LauncherExploreRawGSCDirSPVoiceButton_Click(object sender, EventArgs e)
     {
-      this.ExploreOpenDir(LauncherCS.Launcher.GetRootDirectory() + "raw\\maps\\voice\\");
+      this.ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\voice\\");
     }
 
     private void LauncherForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -2990,7 +2992,7 @@ namespace LauncherCS
             }
             if (stringArray.Length != 0)
             {
-              int num = (int) MessageBox.Show("The following processes are still active:\n\n" + LauncherCS.Launcher.StringArrayToString(stringArray) + "\nPlease close them if neccessary using the Task Manager, or similar program!\n", "Note before exiting the application", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+              int num = (int) MessageBox.Show("The following processes are still active:\n\n" + Launcher.StringArrayToString(stringArray) + "\nPlease close them if neccessary using the Task Manager, or similar program!\n", "Note before exiting the application", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
               break;
             }
             break;
@@ -2998,7 +3000,7 @@ namespace LauncherCS
       }
       this.UpdateMapSettings();
       this.UpdateModSettings();
-      LauncherCS.Launcher.SaveLauncherSettings(LauncherCS.Launcher.launcherSettings.Get());
+      Launcher.SaveLauncherSettings(Launcher.launcherSettings.Get());
     }
 
     private void LauncherForm_Load(object sender, EventArgs e)
@@ -3008,13 +3010,13 @@ namespace LauncherCS
       this.UpdateModList();
       this.EnableMapList();
       this.UpdateStopProcessButton();
-      this.LauncherMapFilesSystemWatcher.Path = LauncherCS.Launcher.GetMapSourceDirectory();
-      this.LauncherModsDirectorySystemWatcher.Path = LauncherCS.Launcher.GetModsDirectory();
+      this.LauncherMapFilesSystemWatcher.Path = Launcher.GetMapSourceDirectory();
+      this.LauncherModsDirectorySystemWatcher.Path = Launcher.GetModsDirectory();
       this.LauncherMapFilesSystemWatcher.EnableRaisingEvents = true;
       this.LauncherModsDirectorySystemWatcher.EnableRaisingEvents = true;
       LauncherForm launcherForm = this;
-      launcherForm.Text = launcherForm.Text + " - " + LauncherCS.Launcher.GetRootDirectory();
-      this.SetModSelection(LauncherCS.Launcher.launcherSettings.GetString("active_mod"), true);
+      launcherForm.Text = launcherForm.Text + " - " + Launcher.GetRootDirectory();
+      this.SetModSelection(Launcher.launcherSettings.GetString("active_mod"), true);
     }
 
     private void LauncherGameOptionsFlowPanel_Click(object sender, EventArgs e)
@@ -3060,7 +3062,7 @@ namespace LauncherCS
         {
           StartInfo = {
             ErrorDialog = true,
-            FileName = Path.Combine(LauncherCS.Launcher.GetModDirectory(this.modName), this.LauncherIwdFileTree.SelectedNode.FullPath)
+            FileName = Path.Combine(Launcher.GetModDirectory(this.modName), this.LauncherIwdFileTree.SelectedNode.FullPath)
           }
         }.Start();
       }
@@ -3155,7 +3157,7 @@ namespace LauncherCS
 
     private void LauncherModComboBox_SelectedIndexChanged(object sender, EventArgs e)
     {
-      LauncherCS.Launcher.launcherSettings.SetString("active_mod", this.LauncherModComboBox.Text);
+      Launcher.launcherSettings.SetString("active_mod", this.LauncherModComboBox.Text);
       this.LauncherModComboBoxApplySettings(load: false);
       this.UpdateModSettings();
       this.LauncherModComboBoxApplySettings(false);
@@ -3169,22 +3171,22 @@ namespace LauncherCS
       this.LauncherModFolderGroupBox.Enabled = flag;
       this.LauncherIwdFileGroupBox.Enabled = flag;
       this.LauncherIwdFileTreeBeginUpdate();
-      if (save && this.modName != null && Directory.Exists(LauncherCS.Launcher.GetModDirectory(this.modName, false)))
-        LauncherCS.Launcher.SaveTextFile(Path.Combine(LauncherCS.Launcher.GetModDirectory(this.modName), this.modName + ".files"), LauncherCS.Launcher.HashTableToStringArray(this.TreeViewToHashTable(this.LauncherIwdFileTree.Nodes)));
+      if (save && this.modName != null && Directory.Exists(Launcher.GetModDirectory(this.modName, false)))
+        Launcher.SaveTextFile(Path.Combine(Launcher.GetModDirectory(this.modName), this.modName + ".files"), Launcher.HashTableToStringArray(this.TreeViewToHashTable(this.LauncherIwdFileTree.Nodes)));
       if (load && this.LauncherModComboBox.SelectedItem != null)
       {
         this.modName = this.LauncherModComboBox.SelectedItem.ToString();
-        string textFile = Path.Combine(LauncherCS.Launcher.GetModDirectory(this.modName), this.modName + ".files");
+        string textFile = Path.Combine(Launcher.GetModDirectory(this.modName), this.modName + ".files");
         this.LauncherIwdFileTree.Nodes.Clear();
-        this.AddFilesToTreeView(LauncherCS.Launcher.GetModDirectory(this.modName), this.LauncherIwdFileTree.Nodes, true);
-        this.HashTableToTreeView(LauncherCS.Launcher.StringArrayToHashTable(LauncherCS.Launcher.LoadTextFile(textFile)), this.LauncherIwdFileTree.Nodes);
+        this.AddFilesToTreeView(Launcher.GetModDirectory(this.modName), this.LauncherIwdFileTree.Nodes, true);
+        this.HashTableToTreeView(Launcher.StringArrayToHashTable(Launcher.LoadTextFile(textFile)), this.LauncherIwdFileTree.Nodes);
       }
       this.LauncherIwdFileTreeEndUpdate();
     }
 
     private void LauncherModFolderViewButton_Click(object sender, EventArgs e)
     {
-      Process.Start(LauncherCS.Launcher.GetModDirectory(this.LauncherModComboBox.SelectedItem.ToString()));
+      Process.Start(Launcher.GetModDirectory(this.LauncherModComboBox.SelectedItem.ToString()));
     }
 
     private void LauncherModsDirectorySystemWatcher_Changed(object sender, FileSystemEventArgs e)
@@ -3209,7 +3211,7 @@ namespace LauncherCS
 
     private void LauncherModZoneSourceCSVButton_Click(object sender, EventArgs e)
     {
-      string str = Path.Combine(LauncherCS.Launcher.GetModDirectory(this.LauncherModComboBox.SelectedItem.ToString()), "mod.csv");
+      string str = Path.Combine(Launcher.GetModDirectory(this.LauncherModComboBox.SelectedItem.ToString()), "mod.csv");
       if (!File.Exists(str))
         File.Create(str).Close();
       Process.Start(str);
@@ -3217,7 +3219,7 @@ namespace LauncherCS
 
     private void LauncherModZoneSourceMissingAssetsButton_Click(object sender, EventArgs e)
     {
-      string str = Path.Combine(LauncherCS.Launcher.GetModDirectory(this.LauncherModComboBox.SelectedItem.ToString()), "missingasset.csv");
+      string str = Path.Combine(Launcher.GetModDirectory(this.LauncherModComboBox.SelectedItem.ToString()), "missingasset.csv");
       if (File.Exists(str))
       {
         Process.Start(str);
@@ -3274,7 +3276,7 @@ namespace LauncherCS
         arguments += this.LauncherRunGameCustomCommandLineMPTextBox.Text;
       else if (!mpVersion && this.LauncherRunGameCustomCommandLineCheckBox.Checked)
         arguments += this.LauncherRunGameCustomCommandLineTextBox.Text;
-      this.LaunchProcess(LauncherCS.Launcher.GetGameApplication(mpVersion), arguments, (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
+      this.LaunchProcess(Launcher.GetGameApplication(mpVersion), arguments, (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
     }
 
     private void LauncherRunGameCustomCommandLineTextBox_TextChanged(object sender, EventArgs e)
@@ -3304,7 +3306,7 @@ namespace LauncherCS
 
     private void LauncherscriptToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      Process.Start(LauncherCS.Launcher.GetRootDirectory() + "/docs/script_docs/scriptFunctions/index.htm");
+      Process.Start(Launcher.GetRootDirectory() + "/docs/script_docs/scriptFunctions/index.htm");
     }
 
     private void LauncherScrollBottomConsoleButton_Click(object sender, EventArgs e)
@@ -3381,7 +3383,7 @@ namespace LauncherCS
           Process process = new Process()
           {
             StartInfo = {
-              FileName = Path.Combine(LauncherCS.Launcher.GetStartupDirectory(), processFileName),
+              FileName = Path.Combine(Launcher.GetStartupDirectory(), processFileName),
               CreateNoWindow = true,
               Arguments = arguments,
               UseShellExecute = false
@@ -3467,7 +3469,7 @@ namespace LauncherCS
 
     private void mayaExporterToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      Process.Start(LauncherCS.Launcher.GetRootDirectory() + "/bin/maya/tools/Help/Model_Exporter.pdf");
+      Process.Start(Launcher.GetRootDirectory() + "/bin/maya/tools/Help/Model_Exporter.pdf");
     }
 
     private void mayaPluginSetupToolStripMenuItem_Click(object sender, EventArgs e)
@@ -3497,19 +3499,19 @@ namespace LauncherCS
         }
         if (File.Exists(str2 + "/Maya.env"))
           File.Delete(str2 + "/Maya.env");
-        string str3 = Path.Combine(LauncherCS.Launcher.GetBinDirectory(), "maya/tools/");
+        string str3 = Path.Combine(Launcher.GetBinDirectory(), "maya/tools/");
         string[] contents = new string[2]
         {
           "MAYA_SCRIPT_PATH  = " + str3,
           "MAYA_PLUG_IN_PATH = " + str3
         };
         File.WriteAllLines(str2 + "/Maya.env", contents);
-        File.Copy(Path.Combine(LauncherCS.Launcher.GetBinDirectory(), "maya/tools/usersetup.mel"), str2 + "/scripts/usersetup.mel", true);
+        File.Copy(Path.Combine(Launcher.GetBinDirectory(), "maya/tools/usersetup.mel"), str2 + "/scripts/usersetup.mel", true);
         File.SetAttributes(str2 + "/scripts/usersetup.mel", FileAttributes.Normal);
         string str4 = "Maya2009_x86.zip";
         if (flag)
           str4 = "Maya2009_x64.zip";
-        this.LaunchProcess("7za", "e \"" + str4 + "\" -y", Path.Combine(LauncherCS.Launcher.GetBinDirectory(), "maya/tools/"), false, (LauncherForm.ProcessFinishedDelegate) null);
+        this.LaunchProcess("7za", "e \"" + str4 + "\" -y", Path.Combine(Launcher.GetBinDirectory(), "maya/tools/"), false, (LauncherForm.ProcessFinishedDelegate) null);
         string str5 = "(32bit)";
         if (flag)
           str5 = "(64bit)";
@@ -3524,7 +3526,7 @@ namespace LauncherCS
     private void ModBuildFastFileDelegate(Process lastProcess)
     {
       if (this.LauncherModBuildFastFilesCheckBox.Checked)
-        LauncherCS.Launcher.CopyFileSmart(Path.Combine(LauncherCS.Launcher.GetModDirectory(this.modName), "mod.csv"), Path.Combine(LauncherCS.Launcher.GetZoneSourceDirectory(), "mod.csv"));
+        Launcher.CopyFileSmart(Path.Combine(Launcher.GetModDirectory(this.modName), "mod.csv"), Path.Combine(Launcher.GetZoneSourceDirectory(), "mod.csv"));
       string str = "";
       if (this.LauncherModBuildLinkerOptionsTextBox.Text != null)
         str = this.LauncherModBuildLinkerOptionsTextBox.Text;
@@ -3533,7 +3535,7 @@ namespace LauncherCS
       string[] strArray = new string[6]
       {
         "-nopause -language ",
-        LauncherCS.Launcher.GetLanguage(),
+        Launcher.GetLanguage(),
         " -moddir ",
         this.modName,
         " mod ",
@@ -3544,15 +3546,15 @@ namespace LauncherCS
 
     private void ModBuildFinishedDelegate(Process lastProcess)
     {
-      LauncherCS.Launcher.Publish();
+      Launcher.Publish();
       this.EnableControls(true);
     }
 
     private void ModBuildIwdFileDelegate(Process lastProcess)
     {
-      string fileName = Path.Combine(LauncherCS.Launcher.GetModDirectory(this.modName), this.modName + ".iwd");
+      string fileName = Path.Combine(Launcher.GetModDirectory(this.modName), this.modName + ".iwd");
       if (this.LauncherModBuildIwdFileCheckBox.Checked)
-        LauncherCS.Launcher.DeleteFile(fileName, false);
+        Launcher.DeleteFile(fileName, false);
       bool shouldRun = this.LauncherModBuildIwdFileCheckBox.Checked;
       LauncherForm.ProcessFinishedDelegate nextStage = new LauncherForm.ProcessFinishedDelegate(this.ModBuildFinishedDelegate);
       string[] strArray = new string[5]
@@ -3560,16 +3562,16 @@ namespace LauncherCS
         "a \"",
         fileName,
         "\" -tzip -r \"@",
-        Path.Combine(LauncherCS.Launcher.GetModDirectory(this.modName), this.modName + ".files"),
+        Path.Combine(Launcher.GetModDirectory(this.modName), this.modName + ".files"),
         "\""
       };
-      this.LaunchProcessHelper(shouldRun, nextStage, lastProcess, "7za", string.Concat(strArray), LauncherCS.Launcher.GetModDirectory(this.modName));
+      this.LaunchProcessHelper(shouldRun, nextStage, lastProcess, "7za", string.Concat(strArray), Launcher.GetModDirectory(this.modName));
     }
 
     private void ModBuildMoveModFastFileDelegate(Process lastProcess)
     {
       if (this.LauncherModBuildFastFilesCheckBox.Checked)
-        LauncherCS.Launcher.MoveFile(Path.Combine(LauncherCS.Launcher.GetZoneDirectory(), "mod.ff"), Path.Combine(LauncherCS.Launcher.GetModDirectory(this.modName), "mod.ff"));
+        Launcher.MoveFile(Path.Combine(Launcher.GetZoneDirectory(), "mod.ff"), Path.Combine(Launcher.GetModDirectory(this.modName), "mod.ff"));
       this.ModBuildIwdFileDelegate(lastProcess);
     }
 
@@ -3586,7 +3588,7 @@ namespace LauncherCS
 
     private void newModToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      int num = (int) new CreateModForm().ShowDialog();
+      int num = (int) new CreateMod().ShowDialog();
     }
 
     private void RecursiveCheckNodesDown(TreeNodeCollection tree, bool checkedFlag)
@@ -3650,7 +3652,7 @@ namespace LauncherCS
       int selectedIndex1 = this.LauncherMapList.SelectedIndex;
       int selectedIndex2 = this.LauncherMapTypeList.SelectedIndex;
       this.LauncherMapList.Items.Clear();
-      this.LauncherMapList.Items.AddRange((object[]) LauncherCS.Launcher.GetMapList(selectedIndex2));
+      this.LauncherMapList.Items.AddRange((object[]) Launcher.GetMapList(selectedIndex2));
       if (this.LauncherMapList.Items.Count == 0)
         return;
       this.LauncherMapList.SelectedItem = selectedItem;
@@ -3663,37 +3665,37 @@ namespace LauncherCS
     {
       if (this.mapName != null & save)
       {
-        LauncherCS.Launcher.mapSettings.SetBoolean("compile_bsp", this.LauncherCompileBSPCheckBox.Checked);
-        LauncherCS.Launcher.mapSettings.SetBoolean("compile_lights", this.LauncherCompileLightsCheckBox.Checked);
-        LauncherCS.Launcher.mapSettings.SetBoolean("compile_paths", this.LauncherConnectPathsCheckBox.Checked);
-        LauncherCS.Launcher.mapSettings.SetBoolean("compile_reflections", this.LauncherCompileReflectionsCheckBox.Checked);
-        LauncherCS.Launcher.mapSettings.SetBoolean("compile_buildffs", this.LauncherBuildFastFilesCheckBox.Checked);
-        LauncherCS.Launcher.mapSettings.SetBoolean("compile_bspinfo", this.LauncherBspInfoCheckBox.Checked);
-        LauncherCS.Launcher.mapSettings.SetBoolean("compile_runafter", this.LauncherRunMapAfterCompileCheckBox.Checked);
-        LauncherCS.Launcher.mapSettings.SetBoolean("compile_useruntab", this.LauncherUseRunGameTypeOptionsCheckBox.Checked);
-        LauncherCS.Launcher.mapSettings.SetString("compile_runoptions", this.LauncherCustomRunOptionsTextBox.Text);
-        LauncherCS.Launcher.mapSettings.SetBoolean("compile_modenabled", this.LauncherModSpecificMapCheckBox.Checked);
-        LauncherCS.Launcher.mapSettings.SetString("compile_modname", this.LauncherModSpecificMapComboBox.Text);
-        LauncherCS.Launcher.mapSettings.SetBoolean("compile_collectdots", this.LauncherGridCollectDotsCheckBox.Checked);
-        LauncherCS.Launcher.SaveMapSettings(this.mapName, LauncherCS.Launcher.mapSettings.Get());
+        Launcher.mapSettings.SetBoolean("compile_bsp", this.LauncherCompileBSPCheckBox.Checked);
+        Launcher.mapSettings.SetBoolean("compile_lights", this.LauncherCompileLightsCheckBox.Checked);
+        Launcher.mapSettings.SetBoolean("compile_paths", this.LauncherConnectPathsCheckBox.Checked);
+        Launcher.mapSettings.SetBoolean("compile_reflections", this.LauncherCompileReflectionsCheckBox.Checked);
+        Launcher.mapSettings.SetBoolean("compile_buildffs", this.LauncherBuildFastFilesCheckBox.Checked);
+        Launcher.mapSettings.SetBoolean("compile_bspinfo", this.LauncherBspInfoCheckBox.Checked);
+        Launcher.mapSettings.SetBoolean("compile_runafter", this.LauncherRunMapAfterCompileCheckBox.Checked);
+        Launcher.mapSettings.SetBoolean("compile_useruntab", this.LauncherUseRunGameTypeOptionsCheckBox.Checked);
+        Launcher.mapSettings.SetString("compile_runoptions", this.LauncherCustomRunOptionsTextBox.Text);
+        Launcher.mapSettings.SetBoolean("compile_modenabled", this.LauncherModSpecificMapCheckBox.Checked);
+        Launcher.mapSettings.SetString("compile_modname", this.LauncherModSpecificMapComboBox.Text);
+        Launcher.mapSettings.SetBoolean("compile_collectdots", this.LauncherGridCollectDotsCheckBox.Checked);
+        Launcher.SaveMapSettings(this.mapName, Launcher.mapSettings.Get());
         this.mapName = (string) null;
       }
       if (!(this.LauncherMapList.SelectedItem != null & load))
         return;
       this.mapName = this.LauncherMapList.SelectedItem.ToString();
-      LauncherCS.Launcher.mapSettings.Set(LauncherCS.Launcher.LoadMapSettings(this.mapName));
-      this.LauncherCompileBSPCheckBox.Checked = LauncherCS.Launcher.mapSettings.GetBoolean("compile_bsp");
-      this.LauncherCompileLightsCheckBox.Checked = LauncherCS.Launcher.mapSettings.GetBoolean("compile_lights");
-      this.LauncherConnectPathsCheckBox.Checked = LauncherCS.Launcher.mapSettings.GetBoolean("compile_paths");
-      this.LauncherCompileReflectionsCheckBox.Checked = LauncherCS.Launcher.mapSettings.GetBoolean("compile_reflections");
-      this.LauncherBuildFastFilesCheckBox.Checked = LauncherCS.Launcher.mapSettings.GetBoolean("compile_buildffs");
-      this.LauncherBspInfoCheckBox.Checked = LauncherCS.Launcher.mapSettings.GetBoolean("compile_bspinfo");
-      this.LauncherRunMapAfterCompileCheckBox.Checked = LauncherCS.Launcher.mapSettings.GetBoolean("compile_runafter");
-      this.LauncherUseRunGameTypeOptionsCheckBox.Checked = LauncherCS.Launcher.mapSettings.GetBoolean("compile_useruntab");
-      this.LauncherCustomRunOptionsTextBox.Text = LauncherCS.Launcher.mapSettings.GetString("compile_runoptions");
-      this.LauncherGridCollectDotsCheckBox.Checked = LauncherCS.Launcher.mapSettings.GetBoolean("compile_collectdots");
-      this.LauncherModSpecificMapCheckBox.Checked = LauncherCS.Launcher.mapSettings.GetBoolean("compile_modenabled");
-      string str = LauncherCS.Launcher.mapSettings.GetString("compile_modname");
+      Launcher.mapSettings.Set(Launcher.LoadMapSettings(this.mapName));
+      this.LauncherCompileBSPCheckBox.Checked = Launcher.mapSettings.GetBoolean("compile_bsp");
+      this.LauncherCompileLightsCheckBox.Checked = Launcher.mapSettings.GetBoolean("compile_lights");
+      this.LauncherConnectPathsCheckBox.Checked = Launcher.mapSettings.GetBoolean("compile_paths");
+      this.LauncherCompileReflectionsCheckBox.Checked = Launcher.mapSettings.GetBoolean("compile_reflections");
+      this.LauncherBuildFastFilesCheckBox.Checked = Launcher.mapSettings.GetBoolean("compile_buildffs");
+      this.LauncherBspInfoCheckBox.Checked = Launcher.mapSettings.GetBoolean("compile_bspinfo");
+      this.LauncherRunMapAfterCompileCheckBox.Checked = Launcher.mapSettings.GetBoolean("compile_runafter");
+      this.LauncherUseRunGameTypeOptionsCheckBox.Checked = Launcher.mapSettings.GetBoolean("compile_useruntab");
+      this.LauncherCustomRunOptionsTextBox.Text = Launcher.mapSettings.GetString("compile_runoptions");
+      this.LauncherGridCollectDotsCheckBox.Checked = Launcher.mapSettings.GetBoolean("compile_collectdots");
+      this.LauncherModSpecificMapCheckBox.Checked = Launcher.mapSettings.GetBoolean("compile_modenabled");
+      string str = Launcher.mapSettings.GetString("compile_modname");
       if (str.Length > 0)
         this.LauncherModSpecificMapComboBox.Text = str;
       else
@@ -3704,23 +3706,23 @@ namespace LauncherCS
     {
       if (this.modName != null & save)
       {
-        LauncherCS.Launcher.modSettings.SetBoolean("build_fastfile", this.LauncherModBuildFastFilesCheckBox.Checked);
-        LauncherCS.Launcher.modSettings.SetBoolean("build_iwd", this.LauncherModBuildIwdFileCheckBox.Checked);
-        LauncherCS.Launcher.modSettings.SetBoolean("build_sounds", this.LauncherModBuildSoundsCheckBox.Checked);
-        LauncherCS.Launcher.modSettings.SetBoolean("build_verbose", this.LauncherModVerboseCheckBox.Checked);
-        LauncherCS.Launcher.modSettings.SetString("build_options", this.LauncherModBuildLinkerOptionsTextBox.Text);
-        LauncherCS.Launcher.SaveModSettings(this.modName, LauncherCS.Launcher.modSettings.Get());
+        Launcher.modSettings.SetBoolean("build_fastfile", this.LauncherModBuildFastFilesCheckBox.Checked);
+        Launcher.modSettings.SetBoolean("build_iwd", this.LauncherModBuildIwdFileCheckBox.Checked);
+        Launcher.modSettings.SetBoolean("build_sounds", this.LauncherModBuildSoundsCheckBox.Checked);
+        Launcher.modSettings.SetBoolean("build_verbose", this.LauncherModVerboseCheckBox.Checked);
+        Launcher.modSettings.SetString("build_options", this.LauncherModBuildLinkerOptionsTextBox.Text);
+        Launcher.SaveModSettings(this.modName, Launcher.modSettings.Get());
         this.modName = (string) null;
       }
       if (!(this.LauncherModComboBox.SelectedItem != null & load))
         return;
       this.modName = this.LauncherModComboBox.SelectedItem.ToString();
-      LauncherCS.Launcher.modSettings.Set(LauncherCS.Launcher.LoadModSettings(this.modName));
-      this.LauncherModBuildFastFilesCheckBox.Checked = LauncherCS.Launcher.modSettings.GetBoolean("build_fastfile");
-      this.LauncherModBuildIwdFileCheckBox.Checked = LauncherCS.Launcher.modSettings.GetBoolean("build_iwd");
-      this.LauncherModBuildSoundsCheckBox.Checked = LauncherCS.Launcher.modSettings.GetBoolean("build_sounds");
-      this.LauncherModVerboseCheckBox.Checked = LauncherCS.Launcher.modSettings.GetBoolean("build_verbose");
-      this.LauncherModBuildLinkerOptionsTextBox.Text = LauncherCS.Launcher.modSettings.GetString("build_options");
+      Launcher.modSettings.Set(Launcher.LoadModSettings(this.modName));
+      this.LauncherModBuildFastFilesCheckBox.Checked = Launcher.modSettings.GetBoolean("build_fastfile");
+      this.LauncherModBuildIwdFileCheckBox.Checked = Launcher.modSettings.GetBoolean("build_iwd");
+      this.LauncherModBuildSoundsCheckBox.Checked = Launcher.modSettings.GetBoolean("build_sounds");
+      this.LauncherModVerboseCheckBox.Checked = Launcher.modSettings.GetBoolean("build_verbose");
+      this.LauncherModBuildLinkerOptionsTextBox.Text = Launcher.modSettings.GetString("build_options");
     }
 
     private void UpdateModList()
@@ -3732,7 +3734,7 @@ namespace LauncherCS
         this.LauncherModSpecificMapComboBox
       };
       string[] strArray = new string[comboBoxArray.Length];
-      string[] modList = LauncherCS.Launcher.GetModList();
+      string[] modList = Launcher.GetModList();
       for (int index = 0; index < comboBoxArray.Length; ++index)
       {
         strArray[index] = comboBoxArray[index].SelectedItem != null ? comboBoxArray[index].SelectedItem.ToString() : "";
@@ -3793,7 +3795,7 @@ namespace LauncherCS
 
     private void utilityDocsToolStripMenuItem_Click(object sender, EventArgs e)
     {
-      Process.Start(LauncherCS.Launcher.GetRootDirectory() + "/docs/script_docs/UtilityFunctions/index.htm");
+      Process.Start(Launcher.GetRootDirectory() + "/docs/script_docs/UtilityFunctions/index.htm");
     }
 
     private void WriteConsole(string s, bool isStdError)
@@ -3817,12 +3819,12 @@ namespace LauncherCS
           {
             if (!flag1)
             {
-					LauncherWarningsPictureBox.BackgroundImage = Properties.Resources.Warning;
+					LauncherWarningsPictureBox.BackgroundImage = Resources.Warning;
 					this.LauncherWarningsCounter.Text = Convert.ToString(Convert.ToInt32(this.LauncherWarningsCounter.Text) + 1);
             }
             else
             {
-					LauncherErrorsPictureBox.BackgroundImage = Properties.Resources.error;
+					LauncherErrorsPictureBox.BackgroundImage = Resources.error;
 					this.LauncherErrorsCounter.Text = Convert.ToString(Convert.ToInt32(this.LauncherErrorsCounter.Text) + 1);
             }
             this.LauncherConsole.SelectionFont = new Font(this.LauncherConsole.SelectionFont, FontStyle.Bold);
@@ -3854,27 +3856,27 @@ namespace LauncherCS
       bool mpVersion = false;
       if (this.LauncherRunGameMapNameTextBox.Text.Contains("mp_"))
         mpVersion = true;
-      this.LaunchProcess(LauncherCS.Launcher.GetGameApplication(mpVersion), arguments, (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
+      this.LaunchProcess(Launcher.GetGameApplication(mpVersion), arguments, (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
     }
 
     private void editToolStripMenuItem_Click(object sender, EventArgs e)
     {
       string str = this.LauncherMapList.Items[this.LauncherMapListContextMenu_Map].ToString();
-      this.LaunchProcess("CoDBORadiant", "\"" + Path.Combine(LauncherCS.Launcher.GetMapSourceDirectory(), str + ".map") + "\"", (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
+      this.LaunchProcess("CoDBORadiant", "\"" + Path.Combine(Launcher.GetMapSourceDirectory(), str + ".map") + "\"", (string) null, false, (LauncherForm.ProcessFinishedDelegate) null);
     }
 
     private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
     {
       string mapName = this.LauncherMapList.Items[this.LauncherMapListContextMenu_Map].ToString();
-      string[] mapFiles1 = LauncherCS.Launcher.GetMapFiles(mapName);
-      if (DialogResult.Yes != MessageBox.Show("The following files would be deleted:\n\n" + LauncherCS.Launcher.StringArrayToString(mapFiles1), "Are you sure you want to delete these files?", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation))
+      string[] mapFiles1 = Launcher.GetMapFiles(mapName);
+      if (DialogResult.Yes != MessageBox.Show("The following files would be deleted:\n\n" + Launcher.StringArrayToString(mapFiles1), "Are you sure you want to delete these files?", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation))
         return;
       foreach (string fileName in mapFiles1)
-        LauncherCS.Launcher.DeleteFile(fileName);
-      string[] mapFiles2 = LauncherCS.Launcher.GetMapFiles(mapName);
+        Launcher.DeleteFile(fileName);
+      string[] mapFiles2 = Launcher.GetMapFiles(mapName);
       if (mapFiles2.Length != 0)
       {
-        int num = (int) MessageBox.Show("Could not delete the following files:\n\n" + LauncherCS.Launcher.StringArrayToString(mapFiles2), "Error deleting files", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+        int num = (int) MessageBox.Show("Could not delete the following files:\n\n" + Launcher.StringArrayToString(mapFiles2), "Error deleting files", MessageBoxButtons.OK, MessageBoxIcon.Hand);
       }
       this.UpdateMapList();
       this.EnableMapList();

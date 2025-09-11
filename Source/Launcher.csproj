@@ -58,7 +58,7 @@
     <Compile Include="Forms\ZoneSourceForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\CreateModForm.cs">
+    <Compile Include="Forms\CreateMod.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\LightOptionsForm.cs">
@@ -71,12 +71,11 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Properties\Settings.cs" />
-    <Compile Include="Properties\Resources.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Forms\CreateModForm.resx">
-      <DependentUpon>CreateModForm.cs</DependentUpon>
+    <EmbeddedResource Include="Forms\CreateMod.resx">
+      <DependentUpon>CreateMod.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

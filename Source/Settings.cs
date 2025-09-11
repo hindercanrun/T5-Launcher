@@ -1,5 +1,5 @@
 ﻿// Decompiled with JetBrains decompiler
-// Type: LauncherCS.Settings
+// Type: Settings
 // Assembly: Launcher, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null
 // MVID: BE2EDF30-BDA3-4FE0-9EFC-B0A1BE215D80
 // Assembly location: D:\SteamLibrary\steamapps\common\Call of Duty Black Ops\bin\Launcher.exe
@@ -7,7 +7,7 @@
 using System;
 using System.Collections;
 
-namespace LauncherCS
+namespace Launcher
 {
   public struct Settings
 	{
