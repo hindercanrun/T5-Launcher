@@ -48,6 +48,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Utils\FileSystem.cs" />
     <Compile Include="Utils\Settings.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="Launcher.cs" />
@@ -73,6 +74,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Forms\CreateMap.resx">
+      <DependentUpon>CreateMap.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Forms\CreateMod.resx">
       <DependentUpon>CreateMod.cs</DependentUpon>
     </EmbeddedResource>

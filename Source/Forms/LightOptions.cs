@@ -7,7 +7,7 @@ namespace Launcher
 {
 	internal class LightOptions : Form
 	{
-		private readonly IContainer components;
+		private readonly IContainer components = null;
 		private Button LightOptionsButtonCancel;
 		private Button LightOptionsButtonOK;
 		private GroupBox LightOptionsGroupBox;
@@ -31,13 +31,6 @@ namespace Launcher
 		internal LightOptions()
 		{
 			InitializeComponent();
-		}
-
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && components != null)
-				components.Dispose();
-			base.Dispose(disposing);
 		}
 
 		private void InitializeComponent()
@@ -262,7 +255,7 @@ namespace Launcher
 			ShowInTaskbar = false;
 			StartPosition = FormStartPosition.CenterParent;
 			Text = "Advanced Users Options";
-			Load += new EventHandler(LightOptionsForm_Load);
+			Load += new EventHandler(LightOptions_Load);
 			LightOptionsGroupBox.ResumeLayout(false);
 			LightOptionsGroupBox.PerformLayout();
 			LightOptionsLGINumericUpDown.EndInit();
@@ -274,13 +267,46 @@ namespace Launcher
 			ResumeLayout(false);
 		}
 
-		private void LightOptionsButtonCancel_Click(object sender, EventArgs e)
+		protected override void Dispose(bool disposing)
 		{
-			Close();
+			if (disposing && components != null) components.Dispose();
+			base.Dispose(disposing);
+		}
+
+		private void LightOptions_Load(object sender, EventArgs e)
+		{
+			LightOptionsExtraRadioButton.Checked = Launcher.mapSettings.GetBoolean("lightoptions_extra");
+			LightOptionsFastRadioButton.Checked = !LightOptionsExtraRadioButton.Checked;
+			LightOptionsNoModelShadowsCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_nomodelshadow");
+			LightOptionsVerboseCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_verbose");
+			LightOptionsHDRCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_hdr");
+			LightOptionsTracesCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_traces");
+			LightOptionsMaxBouncesCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_maxbounces");
+			LightOptionsJitterCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_jitter");
+			LightOptionsLGICheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_lgi");
+
+			Launcher.SetNumericUpDownValue(LightOptionsTracesNumericUpDown, Launcher.mapSettings.GetDecimal("lightoptions_traces_val"));
+			Launcher.SetNumericUpDownValue(LightOptionsMaxBouncesNumericUpDown, Launcher.mapSettings.GetDecimal("lightoptions_maxbounces_val"));
+			Launcher.SetNumericUpDownValue(LightOptionsJitterNumericUpDown, Launcher.mapSettings.GetDecimal("lightoptions_jitter_val"));
+			Launcher.SetNumericUpDownValue(LightOptionsLGINumericUpDown, Launcher.mapSettings.GetDecimal("lightoptions_lgi_val"));
+			
+			LightOptionsExtraOptionsTextBox.Text = Launcher.mapSettings.GetString("lightoptions_extraoptions");
+
+			// Update the form
+			LightOptionsUpdate();
+		}
+
+		private void LightOptionsUpdate()
+		{
+			LightOptionsTracesNumericUpDown.Enabled = LightOptionsTracesCheckBox.Checked;
+			LightOptionsMaxBouncesNumericUpDown.Enabled = LightOptionsMaxBouncesCheckBox.Checked;
+			LightOptionsJitterNumericUpDown.Enabled = LightOptionsJitterCheckBox.Checked;
+			LightOptionsLGINumericUpDown.Enabled = LightOptionsLGICheckBox.Checked;
 		}
 
 		private void LightOptionsButtonOK_Click(object sender, EventArgs e)
 		{
+			// Set the settings
 			Launcher.mapSettings.SetBoolean("lightoptions_extra", LightOptionsExtraRadioButton.Checked);
 			Launcher.mapSettings.SetBoolean("lightoptions_nomodelshadow", LightOptionsNoModelShadowsCheckBox.Checked);
 			Launcher.mapSettings.SetBoolean("lightoptions_verbose", LightOptionsVerboseCheckBox.Checked);
@@ -294,54 +320,34 @@ namespace Launcher
 			Launcher.mapSettings.SetDecimal("lightoptions_jitter_val", LightOptionsJitterNumericUpDown.Value);
 			Launcher.mapSettings.SetDecimal("lightoptions_lgi_val", LightOptionsLGINumericUpDown.Value);
 			Launcher.mapSettings.SetString("lightoptions_extraoptions", LightOptionsExtraOptionsTextBox.Text);
+
+			// Now close the pop-up
 			Close();
 		}
 
-		private void LightOptionsForm_Load(object sender, EventArgs e)
+		private void LightOptionsButtonCancel_Click(object sender, EventArgs e)
 		{
-			LightOptionsExtraRadioButton.Checked = Launcher.mapSettings.GetBoolean("lightoptions_extra");
-			LightOptionsFastRadioButton.Checked = !LightOptionsExtraRadioButton.Checked;
-			LightOptionsNoModelShadowsCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_nomodelshadow");
-			LightOptionsVerboseCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_verbose");
-			LightOptionsHDRCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_hdr");
-			LightOptionsTracesCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_traces");
-			LightOptionsMaxBouncesCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_maxbounces");
-			LightOptionsJitterCheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_jitter");
-			LightOptionsLGICheckBox.Checked = Launcher.mapSettings.GetBoolean("lightoptions_lgi");
-			Launcher.SetNumericUpDownValue(LightOptionsTracesNumericUpDown, Launcher.mapSettings.GetDecimal("lightoptions_traces_val"));
-			Launcher.SetNumericUpDownValue(LightOptionsMaxBouncesNumericUpDown, Launcher.mapSettings.GetDecimal("lightoptions_maxbounces_val"));
-			Launcher.SetNumericUpDownValue(LightOptionsJitterNumericUpDown, Launcher.mapSettings.GetDecimal("lightoptions_jitter_val"));
-			Launcher.SetNumericUpDownValue(LightOptionsLGINumericUpDown, Launcher.mapSettings.GetDecimal("lightoptions_lgi_val"));
-			LightOptionsExtraOptionsTextBox.Text = Launcher.mapSettings.GetString("lightoptions_extraoptions");
-			LightOptionsFormUpdate();
-		}
-
-		private void LightOptionsFormUpdate()
-		{
-			LightOptionsTracesNumericUpDown.Enabled = LightOptionsTracesCheckBox.Checked;
-			LightOptionsMaxBouncesNumericUpDown.Enabled = LightOptionsMaxBouncesCheckBox.Checked;
-			LightOptionsJitterNumericUpDown.Enabled = LightOptionsJitterCheckBox.Checked;
-			LightOptionsLGINumericUpDown.Enabled = LightOptionsLGICheckBox.Checked;
+			Close();
 		}
 
 		private void LightOptionsJitterCheckBox_CheckedChanged(object sender, EventArgs e)
 		{
-			LightOptionsFormUpdate();
+			LightOptionsUpdate();
 		}
 
 		private void LightOptionsMaxBouncesCheckBox_CheckedChanged(object sender, EventArgs e)
 		{
-			LightOptionsFormUpdate();
+			LightOptionsUpdate();
 		}
 
 		private void LightOptionsTracesCheckBox_CheckedChanged(object sender, EventArgs e)
 		{
-			LightOptionsFormUpdate();
+			LightOptionsUpdate();
 		}
 
 		private void LightOptionsLGICheckBox_CheckedChanged(object sender, EventArgs e)
 		{
-			LightOptionsFormUpdate();
+			LightOptionsUpdate();
 		}
 	}
 }

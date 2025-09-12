@@ -8,7 +8,7 @@ namespace Launcher
 {
 	internal class CreateMod : Form
 	{
-		private readonly IContainer components;
+		private readonly IContainer components = null;
 		private GroupBox NewModGroupBox;
 		private Label NewModNameLabel;
 		private TextBox NewModNameTextBox;
@@ -17,15 +17,6 @@ namespace Launcher
 		internal CreateMod()
 		{
 			InitializeComponent();
-		}
-
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && components != null)
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
 		}
 
 		private void InitializeComponent()
@@ -95,17 +86,23 @@ namespace Launcher
 			ResumeLayout(false);
 		}
 
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing && components != null) components.Dispose();
+			base.Dispose(disposing);
+		}
+
 		private void NewModCreateButton_Click(object sender, EventArgs e)
 		{
+			string text = NewModNameTextBox.Text;
+			string path = Path.Combine(Launcher.GetModsDirectory(), text);
+
 			// Check if null or empty
-			if (NewModNameTextBox.Text == null || NewModNameTextBox.Text == "")
+			if (text == null || text == "")
 			{
 				MessageBox.Show("Mod folder name is invalid.", "Error");
 				return;
 			}
-
-			string text = NewModNameTextBox.Text;
-			string path = Path.Combine(Launcher.GetModsDirectory(), text);
 
 			// Check if mod exists
 			if (Directory.Exists(path))
@@ -123,8 +120,8 @@ namespace Launcher
 			Close();
 
 			// Set tabs
-			Launcher.TheLauncherForm.SetLauncherTab(MainWindow.LauncherTabType.Mods);
-			Launcher.TheLauncherForm.SetModSelection(text, true);
+			Launcher.MainForm.SetLauncherTab(MainWindow.LauncherTabType.Mods);
+			Launcher.MainForm.SetModSelection(text, true);
 		}
 	}
 }

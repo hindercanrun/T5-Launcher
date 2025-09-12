@@ -14,20 +14,11 @@ namespace Launcher
 		private TextBox MapNameTextBox;
 		private Button MapCreateButtonOK;
 		private Button MapCreateButtonCancel;
-		private Launcher.MAP_TEMPLATE_TYPE cTemplateType;
+		private Launcher.MAP_TEMPLATE_TYPE templateType;
 
 		internal CreateMap()
 		{
 			InitializeComponent();
-		}
-
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && components != null)
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
 		}
 
 		private void InitializeComponent()
@@ -57,7 +48,7 @@ namespace Launcher
 			MapTemplatesListBox.Size = new Size(120, 108);
 			MapTemplatesListBox.TabIndex = 0;
 			MapTemplatesListBox.SelectedIndexChanged += new EventHandler(MapTemplatesListBox_SelectedIndexChanged);
-			MapNameGroupBox.Controls.Add((Control)this.MapNameTextBox);
+			MapNameGroupBox.Controls.Add(MapNameTextBox);
 			MapNameGroupBox.Location = new Point(150, 12);
 			MapNameGroupBox.Name = "MapNameGroupBox";
 			MapNameGroupBox.Size = new Size(260, 49);
@@ -102,15 +93,21 @@ namespace Launcher
 			ShowInTaskbar = false;
 			StartPosition = FormStartPosition.CenterParent;
 			Text = "Create a New Map";
-			Load += new EventHandler(LauncherCreateMapForm_Load);
+			Load += new EventHandler(CreateMap_Load);
 			MapTemplatesGroupBox.ResumeLayout(false);
 			MapNameGroupBox.ResumeLayout(false);
 			MapNameGroupBox.PerformLayout();
 			ResumeLayout(false);
-			cTemplateType = Launcher.MAP_TEMPLATE_TYPE.SELECTION_UNDEFINED_TEMPLATE;
+			templateType = Launcher.MAP_TEMPLATE_TYPE.SELECTION_UNDEFINED_TEMPLATE;
 		}
 
-		private void LauncherCreateMapForm_Load(object sender, EventArgs e)
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing && components != null) components.Dispose();
+			base.Dispose(disposing);
+		}
+
+		private void CreateMap_Load(object sender, EventArgs e)
 		{
 			// Clear the list, then grab the template list
 			MapTemplatesListBox.Items.Clear();
@@ -162,18 +159,18 @@ namespace Launcher
 				Launcher.CreateMapFromTemplate(mapTemplate, mapName);
 
 				// Swich the tab to whatever mode
-				if (cTemplateType == Launcher.MAP_TEMPLATE_TYPE.SELECTION_MP_TEMPLATE)
+				if (templateType == Launcher.MAP_TEMPLATE_TYPE.SELECTION_MP_TEMPLATE)
 				{
-					Launcher.TheLauncherForm.SetTabToMultiplayer();
+					Launcher.MainForm.SetTabToMultiplayer();
 				}
 				else
 				{
-					Launcher.TheLauncherForm.SetTabToSingleplayer();
+					Launcher.MainForm.SetTabToSingleplayer();
 				}
 
 				// Set the selection and stuff
-				Launcher.TheLauncherForm.SetMapSelection(text, true);
-				Launcher.TheLauncherForm.SetLauncherTab(MainWindow.LauncherTabType.Maps);
+				Launcher.MainForm.SetMapSelection(text, true);
+				Launcher.MainForm.SetLauncherTab(MainWindow.LauncherTabType.Maps);
 			}
 
 			DialogResult = DialogResult.OK;
@@ -187,26 +184,26 @@ namespace Launcher
 
 			if (selectedIndex < 0)
 			{
-				cTemplateType = Launcher.MAP_TEMPLATE_TYPE.SELECTION_UNDEFINED_TEMPLATE;
+				templateType = Launcher.MAP_TEMPLATE_TYPE.SELECTION_UNDEFINED_TEMPLATE;
 			}
 			else
 			{
 				string mapTemplate = MapTemplatesListBox.Items[selectedIndex].ToString();
-				string name = Launcher.FilterPrefix(MapNameTextBox.Text, cTemplateType);
+				string name = Launcher.FilterPrefix(MapNameTextBox.Text, templateType);
 
 				if (Launcher.IsMultiplayerMapTemplate(mapTemplate))
 				{
-					cTemplateType = Launcher.MAP_TEMPLATE_TYPE.SELECTION_MP_TEMPLATE;
+					templateType = Launcher.MAP_TEMPLATE_TYPE.SELECTION_MP_TEMPLATE;
 					MapNameTextBox.Text = Launcher.MakeMP(name);
 				}
 				else if (Launcher.IsZombieMapTemplate(mapTemplate))
 				{
-					cTemplateType = Launcher.MAP_TEMPLATE_TYPE.SELECTION_ZM_TEMPLATE;
+					templateType = Launcher.MAP_TEMPLATE_TYPE.SELECTION_ZM_TEMPLATE;
 					MapNameTextBox.Text = Launcher.MakeZM(name);
 				}
 				else // Singleplayer
 				{
-					cTemplateType = Launcher.MAP_TEMPLATE_TYPE.SELECTION_CUSTOM_TEMPLATE;
+					templateType = Launcher.MAP_TEMPLATE_TYPE.SELECTION_CUSTOM_TEMPLATE;
 					MapNameTextBox.Text = name;
 				}
 			}

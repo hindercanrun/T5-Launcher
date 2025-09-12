@@ -30,15 +30,6 @@ namespace Launcher
 			ZoneSourceInfoModTextBox.Text = modName;
 		}
 
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && components != null)
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
-
 		private void InitializeComponent()
 		{
 			components = new Container();
@@ -183,7 +174,7 @@ namespace Launcher
 			ShowInTaskbar = false;
 			StartPosition = FormStartPosition.CenterParent;
 			Text = "Zone Source";
-			Load += new EventHandler(LauncherZoneSourceForm_Load);
+			Load += new EventHandler(ZoneSource_Load);
 			menuStrip1.ResumeLayout(false);
 			menuStrip1.PerformLayout();
 			ZoneSourcePanel.Panel1.ResumeLayout(false);
@@ -197,18 +188,24 @@ namespace Launcher
 			PerformLayout();
 		}
 
-		private void LauncherZoneSourceForm_Load(object sender, EventArgs e)
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing && components != null) components.Dispose();
+			base.Dispose(disposing);
+		}
+
+		private void ZoneSource_Load(object sender, EventArgs e)
 		{
 			string text = ZoneSourceInfoModTextBox.Text;
 
 			string modCSV = Path.Combine(Launcher.GetModDirectory(text), "mod.csv");
 			ZoneSourceInfoCSVTextBox.Text = modCSV;
 			if (!File.Exists(modCSV)) File.Create(modCSV).Close();
-			ZoneSourceCSVList.Lines = Launcher.LoadTextFile(modCSV);
+			ZoneSourceCSVList.Lines = Utils.FileSystem.LoadTextFile(modCSV);
 
 			string missingAssetCSV = Path.Combine(Launcher.GetModDirectory(text), "missingasset.csv");
 			if (!File.Exists(missingAssetCSV)) return;
-			ZoneSourceMissingAssetsCSVList.Lines = Launcher.LoadTextFile(missingAssetCSV);
+			ZoneSourceMissingAssetsCSVList.Lines = Utils.FileSystem.LoadTextFile(missingAssetCSV);
 		}
 
 		private void SaveCSV()
@@ -217,11 +214,12 @@ namespace Launcher
 
 			string modCSV = Path.Combine(Launcher.GetModDirectory(text), "mod.csv");
 			if (!File.Exists(modCSV)) File.Create(modCSV).Close();
-			Launcher.SaveTextFile(modCSV, ZoneSourceCSVList.Lines);
+			Utils.FileSystem.SaveTextFile(modCSV, ZoneSourceCSVList.Lines);
 
 			string missingAssetCSV = Path.Combine(Launcher.GetModDirectory(text), "missingasset.csv");
-			if (File.Exists(missingAssetCSV)) Launcher.SaveTextFile(missingAssetCSV, ZoneSourceMissingAssetsCSVList.Lines);
+			if (File.Exists(missingAssetCSV)) Utils.FileSystem.SaveTextFile(missingAssetCSV, ZoneSourceMissingAssetsCSVList.Lines);
 
+			// Close the pop-up
 			Close();
 		}
 

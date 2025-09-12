@@ -1,10 +1,4 @@
-﻿// Decompiled with JetBrains decompiler
-// Type: Launcher
-// Assembly: Launcher, Version=0.1.0.0, Culture=neutral, PublicKeyToken=null
-// MVID: BE2EDF30-BDA3-4FE0-9EFC-B0A1BE215D80
-// Assembly location: D:\SteamLibrary\steamapps\common\Call of Duty Black Ops\bin\Launcher.exe
-
-using System;
+﻿using System;
 using System.Collections;
 using System.Drawing;
 using System.IO;
@@ -14,75 +8,43 @@ using System.Windows.Forms;
 
 namespace Launcher
 {
-  internal static class Launcher
-  {
-    public static MainWindow TheLauncherForm = (MainWindow) null;
-    public static Utils.Settings launcherSettings = new Utils.Settings();
-    public static Utils.Settings mapSettings = new Utils.Settings();
-    public static Utils.Settings modSettings;
-    private static bool use_exedir_as_startupdir = true;
+	internal static class Launcher
+	{
+		public static MainWindow MainForm = null;
+		public static Utils.Settings launcherSettings = new Utils.Settings();
+		public static Utils.Settings mapSettings = new Utils.Settings();
+		public static Utils.Settings modSettings;
+		private static readonly bool use_exedir_as_startupdir = true;
 
-    static Launcher() => Launcher.launcherSettings.Set(Launcher.LoadLauncherSettings());
-
-    public static string CanonicalDirectory(string path, bool createIfMissing = true)
-    {
-			string fullPath = Path.GetFullPath(path);
-			MakeDirectory(fullPath);
-
-			if (!fullPath.EndsWith(Path.DirectorySeparatorChar.ToString()))
-			{
-				fullPath += Path.DirectorySeparatorChar.ToString();
-			}
-			return fullPath;
+		static Launcher()
+		{
+			launcherSettings.Set(LoadLauncherSettings());
 		}
 
-    public static bool CopyFile(string sourceFileName, string destinationFileName)
-    {
-      return Launcher.CopyFile(sourceFileName, destinationFileName, false);
-    }
+		[STAThread]
+		private static void Main()
+		{
+			string mutexName = (GetRootDirectory() + Application.ProductName).ToLower().Replace("\\", "-").Replace(":", "-");
 
-    public static bool CopyFile(string sourceFileName, string destinationFileName, bool smartCopy)
-    {
-      if (!File.Exists(sourceFileName))
-      {
-        if (smartCopy)
-          Launcher.DeleteFile(destinationFileName, false);
-        return false;
-      }
-      FileInfo fileInfo1 = new FileInfo(sourceFileName);
-      if (smartCopy)
-      {
-        FileInfo fileInfo2 = new FileInfo(destinationFileName);
-        if (fileInfo1.Exists && fileInfo2.Exists && fileInfo1.CreationTime == fileInfo2.CreationTime && fileInfo1.LastWriteTime == fileInfo2.LastWriteTime && fileInfo1.Length == fileInfo2.Length)
-          return true;
-      }
-      Launcher.WriteMessage("Copying  " + sourceFileName + "\n     to  " + destinationFileName + "\n");
-      if (!Launcher.DeleteFile(destinationFileName, false))
-        return false;
-      Launcher.MakeDirectory(Path.GetDirectoryName(destinationFileName));
-      try
-      {
-        File.Copy(sourceFileName, destinationFileName);
-        if (smartCopy)
-        {
-          File.SetCreationTime(destinationFileName, fileInfo1.CreationTime);
-          File.SetLastWriteTime(destinationFileName, fileInfo1.LastWriteTime);
-        }
-        return true;
-      }
-      catch (Exception ex)
-      {
-        Launcher.WriteError("ERROR: " + ex.Message + "\n");
-        return false;
-      }
-    }
+			using (var mutex = new Mutex(true, mutexName, out bool createdNew))
+			{
+				// If we are opening a new instance while theres already a running instance
+				// just force the window to show on top instead of making a new instance
+				if (!createdNew)
+				{
+					NativeMethods.PostMessage((IntPtr)ushort.MaxValue, NativeMethods.WM_SHOWME, IntPtr.Zero, IntPtr.Zero);
+					return;
+				}
 
-    public static bool CopyFileSmart(string sourceFileName, string destinationFileName)
-    {
-      return Launcher.CopyFile(sourceFileName, destinationFileName, true);
-    }
+				Application.EnableVisualStyles();
+				Application.SetCompatibleTextRenderingDefault(false);
 
-    public static string[] CreateMapFromTemplate(string mapTemplate, string mapName)
+				MainForm = new MainWindow();
+				Application.Run(MainForm);
+			}
+		}
+
+		public static string[] CreateMapFromTemplate(string mapTemplate, string mapName)
     {
       return Launcher.CreateMapFromTemplate(mapTemplate, mapName, false);
     }
@@ -93,8 +55,8 @@ namespace Launcher
       bool justCheckForOverwrite)
     {
       string[] stringArray = new string[0];
-      string directory = Launcher.CanonicalDirectory(Path.Combine(Launcher.GetMapTemplatesDirectory(), mapTemplate));
-      foreach (string textFile in Launcher.GetFilesRecursively(directory, "*template*"))
+      string directory = Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetMapTemplatesDirectory(), mapTemplate));
+      foreach (string textFile in Utils.FileSystem.GetFilesRecursively(directory, "*template*"))
       {
         string str1 = textFile.Substring(directory.Length).Replace("template", mapName);
         string str2 = Path.Combine(Launcher.GetRootDirectory(), str1);
@@ -107,7 +69,7 @@ namespace Launcher
             int index = num++;
             text[index] = str3.Replace("template", mapName);
           }
-          Launcher.SaveTextFile(str2, text);
+					Utils.FileSystem.SaveTextFile(str2, text);
         }
         else if (File.Exists(str2))
           Launcher.StringArrayAdd(ref stringArray, str1);
@@ -148,28 +110,6 @@ namespace Launcher
       }
     }
 
-    public static bool DeleteFile(string fileName) => Launcher.DeleteFile(fileName, true);
-
-    public static bool DeleteFile(string fileName, bool verbose)
-    {
-      if (!File.Exists(fileName))
-        return true;
-      if (verbose)
-        Launcher.WriteMessage("Deleting " + fileName + "\n");
-      try
-      {
-        File.SetAttributes(fileName, FileAttributes.Normal);
-        File.Delete(fileName);
-        return true;
-      }
-      catch (Exception ex)
-      {
-        if (verbose)
-          Launcher.WriteError("ERROR: " + ex.Message + "\n");
-        return false;
-      }
-    }
-
     public static string FilterMP(string name) => !Launcher.IsMP(name) ? name : name.Substring(3);
 
     public static string FilterZM(string name) => !Launcher.IsZM(name) ? name : name.Substring(7);
@@ -183,7 +123,7 @@ namespace Launcher
 
     public static string GetBinDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), "bin"));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), "bin"));
     }
 
     public static string GetBspOptions()
@@ -207,13 +147,13 @@ namespace Launcher
     public static string GetClientScriptsDirectory(bool isMP = false)
     {
       string path2 = isMP ? "mp\\clientscripts" : "clientscripts";
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetRawDirectory(), path2));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetRawDirectory(), path2));
     }
 
     public static string GetCreateFxDirectory(bool isMP = false)
     {
       string path2 = isMP ? "mp\\createfx" : "createfx";
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetClientScriptsDirectory(), path2));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetClientScriptsDirectory(), path2));
     }
 
     public static string[] GetDirs(string directory)
@@ -226,57 +166,7 @@ namespace Launcher
 
     public static string GetExposureDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetRawDirectory(), "exposure"));
-    }
-
-    public static string[] GetFiles(string directory, string searchFilter)
-    {
-      string[] stringArray = new string[0];
-      foreach (FileInfo file in new DirectoryInfo(directory).GetFiles(searchFilter))
-        Launcher.StringArrayAdd(ref stringArray, Path.GetFileName(file.Name));
-      return stringArray;
-    }
-
-    public static string[] GetFilesRecursively(string directory)
-    {
-      return Launcher.GetFilesRecursively(directory, "*");
-    }
-
-    public static string[] GetFilesRecursively(string directory, string filesToIncludeFilter)
-    {
-      string[] files = new string[0];
-      Launcher.GetFilesRecursively(directory, filesToIncludeFilter, ref files);
-      return files;
-    }
-
-    public static void GetFilesRecursively(
-      string directory,
-      string filesToIncludeFilter,
-      ref string[] files)
-    {
-      foreach (DirectoryInfo directory1 in new DirectoryInfo(directory).GetDirectories())
-        Launcher.GetFilesRecursively(Path.Combine(directory, directory1.Name), filesToIncludeFilter, ref files);
-      foreach (FileInfo file in new DirectoryInfo(directory).GetFiles(filesToIncludeFilter))
-        Launcher.StringArrayAdd(ref files, Path.Combine(directory, file.Name.ToLower()));
-    }
-
-    public static string[] GetFilesWithoutExtension(string directory, string searchFilter)
-    {
-      string[] stringArray = new string[0];
-      string str = searchFilter.TrimStart('*');
-      try
-      {
-        foreach (FileSystemInfo file in new DirectoryInfo(directory).GetFiles(searchFilter))
-        {
-          string name = file.Name;
-          if (str.Length == 0 || str.Length > 0 && name.EndsWith(str))
-            Launcher.StringArrayAdd(ref stringArray, Path.GetFileNameWithoutExtension(name));
-        }
-      }
-      catch
-      {
-      }
-      return stringArray;
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetRawDirectory(), "exposure"));
     }
 
     public static string GetGameApplication(bool mpVersion)
@@ -344,7 +234,7 @@ namespace Launcher
 
     private static string GetLocalApplicationModDirectory(string modName)
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetLocalApplicationModsDirectory(), modName));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetLocalApplicationModsDirectory(), modName));
     }
 
     public static string[] GetLocalApplicationModFiles(string modName)
@@ -354,12 +244,12 @@ namespace Launcher
 
     private static string GetLocalApplicationModsDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetLocalApplicationDirectory(), "mods"));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetLocalApplicationDirectory(), "mods"));
     }
 
     private static string GetLocalApplicationUsermapsDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetLocalApplicationDirectory(), "usermaps"));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetLocalApplicationDirectory(), "usermaps"));
     }
 
     public static string[] GetMapFiles(string mapName)
@@ -399,31 +289,31 @@ namespace Launcher
     public static string[] GetMapList(int isMP)
     {
       if (isMP == 0)
-        return Launcher.GetFilesWithoutExtension(Launcher.GetMapSourceDirectory(), "*.map");
+        return Utils.FileSystem.GetFilesWithoutExtension(Launcher.GetMapSourceDirectory(), "*.map");
       try
       {
-        return Launcher.GetFilesWithoutExtension(Launcher.GetMapSourceDirectory() + "\\mp", "*.map");
+        return Utils.FileSystem.GetFilesWithoutExtension(Launcher.GetMapSourceDirectory() + "\\mp", "*.map");
       }
       catch
       {
         Directory.CreateDirectory(Launcher.GetMapSourceDirectory() + "\\mp");
-        return Launcher.GetFilesWithoutExtension(Launcher.GetMapSourceDirectory() + "\\mp", "*.map");
+        return Utils.FileSystem.GetFilesWithoutExtension(Launcher.GetMapSourceDirectory() + "\\mp", "*.map");
       }
     }
 
     public static string GetMapSettingsDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetStartupDirectory(), Path.Combine(nameof (Launcher), "map_settings")));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetStartupDirectory(), Path.Combine(nameof (Launcher), "map_settings")));
     }
 
     public static string GetModSettingsDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetStartupDirectory(), Path.Combine(nameof (Launcher), "mod_settings")));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetStartupDirectory(), Path.Combine(nameof (Launcher), "mod_settings")));
     }
 
     public static string GetLauncherSettingsDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetStartupDirectory(), nameof (Launcher)));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetStartupDirectory(), nameof (Launcher)));
     }
 
     private static string GetMapSettingsFilename(string mapName)
@@ -444,12 +334,12 @@ namespace Launcher
     public static string GetMapSourceDirectory(bool isMP = false)
     {
       string path2 = isMP ? "map_source\\mp" : "map_source";
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), path2));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), path2));
     }
 
     public static string GetMapTemplatesDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetStartupDirectory(), Path.Combine(nameof (Launcher), "map_templates")));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetStartupDirectory(), Path.Combine(nameof (Launcher), "map_templates")));
     }
 
     public static string[] GetMapTemplatesList()
@@ -459,7 +349,7 @@ namespace Launcher
 
     public static string GetModDirectory(string modName, bool createIfMissing = true)
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetModsDirectory(), modName), createIfMissing);
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetModsDirectory(), modName), createIfMissing);
     }
 
     public static string[] GetModFiles(string modName)
@@ -469,9 +359,9 @@ namespace Launcher
 
     public static string[] GetModFilesByDirectory(string directory)
     {
-      string[] filesRecursively1 = Launcher.GetFilesRecursively(directory, "*.ff");
-      string[] filesRecursively2 = Launcher.GetFilesRecursively(directory, "*.iwd");
-      string[] filesRecursively3 = Launcher.GetFilesRecursively(directory, "*.arena");
+      string[] filesRecursively1 = Utils.FileSystem.GetFilesRecursively(directory, "*.ff");
+      string[] filesRecursively2 = Utils.FileSystem.GetFilesRecursively(directory, "*.iwd");
+      string[] filesRecursively3 = Utils.FileSystem.GetFilesRecursively(directory, "*.arena");
       string[] filesByDirectory = new string[filesRecursively1.Length + filesRecursively2.Length + filesRecursively3.Length];
       filesRecursively1.CopyTo((Array) filesByDirectory, 0);
       filesRecursively2.CopyTo((Array) filesByDirectory, filesRecursively1.Length);
@@ -483,50 +373,50 @@ namespace Launcher
 
     public static string GetModsDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), "mods"));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), "mods"));
     }
 
     public static string GetRawDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), "raw"));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), "raw"));
     }
 
     public static string GetRawMapsDirectory(bool isMP = false)
     {
       string path2 = isMP ? "maps\\mp" : "maps";
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetRawDirectory(), path2));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetRawDirectory(), path2));
     }
 
     public static string GetRootDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetStartupDirectory(), ".."));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetStartupDirectory(), ".."));
     }
 
     public static string GetStartupDirectory()
     {
       string path = Launcher.use_exedir_as_startupdir ? Path.GetDirectoryName(Application.ExecutablePath) : Path.GetFullPath(".");
       Directory.SetCurrentDirectory(path);
-      return Launcher.CanonicalDirectory(path);
+      return Utils.FileSystem.CanonicalDirectory(path);
     }
 
     public static string GetStringAssetsDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), "string_assets"));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), "string_assets"));
     }
 
     public static string GetUsermapsDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetModsDirectory(), "usermaps"));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetModsDirectory(), "usermaps"));
     }
 
     public static string GetZoneDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Path.Combine(Launcher.GetRootDirectory(), "zone"), Launcher.GetLanguage()));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Path.Combine(Launcher.GetRootDirectory(), "zone"), Launcher.GetLanguage()));
     }
 
     public static string GetZoneSourceDirectory()
     {
-      return Launcher.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), "zone_source"));
+      return Utils.FileSystem.CanonicalDirectory(Path.Combine(Launcher.GetRootDirectory(), "zone_source"));
     }
 
     public static string GetZoneSourceFile(string mapName)
@@ -614,60 +504,9 @@ namespace Launcher
       return Launcher.LoadTextFile(textFile, (string) null);
     }
 
-    [STAThread]
-    private static void Main()
-    {
-      bool createdNew = false;
-      string name = "";
-      foreach (char ch in (Launcher.GetRootDirectory() + nameof(Launcher)).ToLower())
-        name += (ch == '\\' || ch == ':' ? '-' : ch);
-      Mutex mutex = new Mutex(true, name, out createdNew);
-      if (!createdNew)
-      {
-        NativeMethods.PostMessage((IntPtr) (int) ushort.MaxValue, NativeMethods.WM_SHOWME, IntPtr.Zero, IntPtr.Zero);
-      }
-      else
-      {
-        Application.EnableVisualStyles();
-        Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run((Form) (Launcher.TheLauncherForm = new MainWindow()));
-      }
-    }
-
-    public static void MakeDirectory(string directoryName)
-    {
-      while (!Directory.Exists(directoryName))
-      {
-        string directoryName1 = Path.GetDirectoryName(directoryName);
-        if (directoryName1 != directoryName)
-          Launcher.MakeDirectory(directoryName1);
-        Directory.CreateDirectory(directoryName);
-      }
-    }
-
     public static string MakeMP(string name) => Launcher.IsMP(name) ? name : "mp_" + name;
 
     public static string MakeZM(string name) => Launcher.IsZM(name) ? name : "zombie_" + name;
-
-    public static bool MoveFile(string sourceFileName, string destinationFileName)
-    {
-      if (!File.Exists(sourceFileName))
-        return false;
-      Launcher.WriteMessage("Moving   " + sourceFileName + "\n    to   " + destinationFileName + "\n");
-      if (!Launcher.DeleteFile(destinationFileName, false))
-        return false;
-      Launcher.MakeDirectory(Path.GetDirectoryName(destinationFileName));
-      try
-      {
-        File.Move(sourceFileName, destinationFileName);
-        return true;
-      }
-      catch (Exception ex)
-      {
-        Launcher.WriteError("ERROR: " + ex.Message + "\n");
-        return false;
-      }
-    }
 
     public static void Publish()
     {
@@ -679,7 +518,7 @@ namespace Launcher
     {
       string modDirectory = Launcher.GetModDirectory(modName);
       foreach (string modFile in Launcher.GetModFiles(modName))
-        Launcher.CopyFileSmart(modFile, Path.Combine(Launcher.GetLocalApplicationModDirectory(modName), modFile.Substring(modDirectory.Length)));
+				Utils.FileSystem.CopyFileSmart(modFile, Path.Combine(Launcher.GetLocalApplicationModDirectory(modName), modFile.Substring(modDirectory.Length)));
     }
 
     public static void PublishMods()
@@ -691,33 +530,23 @@ namespace Launcher
     public static void PublishUsermaps()
     {
       string usermapsDirectory = Launcher.GetUsermapsDirectory();
-      foreach (string sourceFileName in Launcher.GetFilesRecursively(usermapsDirectory, "*.ff"))
-        Launcher.CopyFileSmart(sourceFileName, Path.Combine(Launcher.GetLocalApplicationUsermapsDirectory(), sourceFileName.Substring(usermapsDirectory.Length)));
+      foreach (string sourceFileName in Utils.FileSystem.GetFilesRecursively(usermapsDirectory, "*.ff"))
+				Utils.FileSystem.CopyFileSmart(sourceFileName, Path.Combine(Launcher.GetLocalApplicationUsermapsDirectory(), sourceFileName.Substring(usermapsDirectory.Length)));
     }
 
     public static void SaveMapSettings(string mapName, Hashtable mapSettings)
     {
-      Launcher.SaveTextFile(Launcher.GetMapSettingsFilename(mapName), Launcher.HashTableToStringArray(mapSettings));
+			Utils.FileSystem.SaveTextFile(Launcher.GetMapSettingsFilename(mapName), Launcher.HashTableToStringArray(mapSettings));
     }
 
     public static void SaveModSettings(string modName, Hashtable modSettings)
     {
-      Launcher.SaveTextFile(Launcher.GetModSettingsFilename(modName), Launcher.HashTableToStringArray(modSettings));
+			Utils.FileSystem.SaveTextFile(Launcher.GetModSettingsFilename(modName), Launcher.HashTableToStringArray(modSettings));
     }
 
     public static void SaveLauncherSettings(Hashtable settings)
     {
-      Launcher.SaveTextFile(Launcher.GetLauncherSettingsFilename(), Launcher.HashTableToStringArray(settings));
-    }
-
-    public static void SaveTextFile(string textFile, string[] text)
-    {
-      Directory.CreateDirectory(Path.GetDirectoryName(textFile));
-      using (StreamWriter streamWriter = new StreamWriter(textFile))
-      {
-        foreach (string str in text)
-          streamWriter.WriteLine(str);
-      }
+			Utils.FileSystem.SaveTextFile(Launcher.GetLauncherSettingsFilename(), Launcher.HashTableToStringArray(settings));
     }
 
     public static Decimal SetNumericUpDownValue(NumericUpDown ctrl, Decimal Value)
@@ -775,11 +604,11 @@ namespace Launcher
 
     public static void WriteMessage(string s, Color messageColor)
     {
-      Color selectionColor = Launcher.TheLauncherForm.LauncherConsole.SelectionColor;
-      Launcher.TheLauncherForm.LauncherConsole.SelectionColor = messageColor;
-      Launcher.TheLauncherForm.LauncherConsole.AppendText(s);
-      Launcher.TheLauncherForm.LauncherConsole.SelectionColor = selectionColor;
-      Launcher.TheLauncherForm.LauncherConsole.Focus();
+      Color selectionColor = Launcher.MainForm.LauncherConsole.SelectionColor;
+      Launcher.MainForm.LauncherConsole.SelectionColor = messageColor;
+      Launcher.MainForm.LauncherConsole.AppendText(s);
+      Launcher.MainForm.LauncherConsole.SelectionColor = selectionColor;
+      Launcher.MainForm.LauncherConsole.Focus();
     }
 
     public static void WriteMessage(string s) => Launcher.WriteMessage(s, Color.SlateBlue);

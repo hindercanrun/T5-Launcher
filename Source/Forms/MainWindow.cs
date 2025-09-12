@@ -187,12 +187,13 @@ namespace Launcher
 		private ToolStripMenuItem renameToolStripMenuItem;
 		private CheckBox LauncherCompileReflectionsCheckBox;
 		private ToolStripMenuItem newModToolStripMenuItem;
-		private ToolStripMenuItem LaunchernewMapToolStripMenuItem;
 		private ToolStripSeparator toolStripSeparator3;
 		private ToolStripMenuItem exporterTutorialToolStripMenuItem;
 		private int LauncherMapList_WaitingForMouseUp = -1;
 		private Label label;
 		private int LauncherMapListContextMenu_Map = -1;
+		internal delegate void ProcessFinishedDelegate(Process lastProcess);
+		private event ProcessFinishedDelegate processFinishedDelegate;
 
 		internal MainWindow()
 		{
@@ -274,41 +275,11 @@ namespace Launcher
 			LauncherMapTypeList.SelectedIndex = 1;
 		}
 
-		private void AddFilesToTreeView(string Directory, TreeNodeCollection tree, bool firstTime)
-		{
-		  TreeNode treeNode1 = (TreeNode) null;
-		  if (!firstTime)
-		  {
-			treeNode1 = tree.Add(new DirectoryInfo(Directory).Name);
-			tree = treeNode1.Nodes;
-		  }
-		  foreach (DirectoryInfo directory in new DirectoryInfo(Directory).GetDirectories())
-		  {
-			if (!directory.Name.StartsWith("."))
-			  AddFilesToTreeView(Path.Combine(Directory, directory.Name), tree, false);
-		  }
-		  foreach (FileInfo file in new DirectoryInfo(Directory).GetFiles())
-		  {
-			if (!file.Name.StartsWith(".") && file.Extension.ToLower() != ".ff" && file.Extension.ToLower() != ".iwd" && file.Extension.ToLower() != ".files")
-			{
-			  TreeNode treeNode2 = tree.Add(file.Name);
-			  treeNode2.ForeColor = Color.Blue;
-			  treeNode2.Tag = (object) file;
-			}
-		  }
-		  if (treeNode1 == null)
-			return;
-		  if (treeNode1.Nodes.Count != 0)
-			treeNode1.ExpandAll();
-		  else
-			treeNode1.Remove();
-		}
-
 		private void BuildGridDelegate(int r_vc_makelog)
 		{
 		  EnableControls(false);
 		  string path2 = mapName + ".grid";
-		  Launcher.CopyFile(Path.Combine(Launcher.GetMapSourceDirectory(), path2), Path.Combine(Launcher.GetRawMapsDirectory(), Path.Combine(IsMP() ? "mp" : "", path2)));
+			Utils.FileSystem.CopyFile(Path.Combine(Launcher.GetMapSourceDirectory(), path2), Path.Combine(Launcher.GetRawMapsDirectory(), Path.Combine(IsMP() ? "mp" : "", path2)));
 		  MainWindow.ProcessFinishedDelegate nextStage = new MainWindow.ProcessFinishedDelegate(BuildGridFinishedDelegate);
 		  string gameApplication = Launcher.GetGameApplication(IsMP());
 		  string str1 = "raw";
@@ -320,13 +291,8 @@ namespace Launcher
 		private void BuildGridFinishedDelegate(Process lastProcess)
 		{
 		  string path2 = mapName + ".grid";
-		  Launcher.MoveFile(Path.Combine(Launcher.GetRawMapsDirectory(), Path.Combine(IsMP() ? "mp" : "", path2)), Path.Combine(Launcher.GetMapSourceDirectory(), path2));
+			Utils.FileSystem.MoveFile(Path.Combine(Launcher.GetRawMapsDirectory(), Path.Combine(IsMP() ? "mp" : "", path2)), Path.Combine(Launcher.GetMapSourceDirectory(), path2));
 		  EnableControls(true);
-		}
-
-		private void LauncherModSpecificMapCheckBox_CheckedChanged(object sender, EventArgs e)
-		{
-		  LauncherModSpecificMapComboBox.Enabled = LauncherModSpecificMapCheckBox.Checked;
 		}
 
 		private bool CheckZoneSourceFiles()
@@ -349,7 +315,7 @@ namespace Launcher
 		private void CompileLevelBspDelegate(Process lastProcess)
 		{
 		  MainWindow.ProcessFinishedDelegate nextStage = new MainWindow.ProcessFinishedDelegate(CompileLevelVisDelegate);
-		  Launcher.DeleteFile(GetSourceBsp() + ".lin", false);
+			Utils.FileSystem.DeleteFile(GetSourceBsp() + ".lin", false);
 		  string[] strArray = new string[9]
 		  {
 			"-platform pc ",
@@ -403,7 +369,7 @@ namespace Launcher
 			".grid"
 		  };
 		  foreach (string str in strArray)
-			Launcher.DeleteFile(GetDestinationBsp() + str, false);
+				Utils.FileSystem.DeleteFile(GetDestinationBsp() + str, false);
 		  CompileLevelPathsDelegate(lastProcess);
 		}
 
@@ -451,9 +417,9 @@ namespace Launcher
 		  string path1 = Launcher.mapSettings.GetBoolean("compile_modenabled") ? Launcher.GetModDirectory(Launcher.mapSettings.GetString("compile_modname")) : Path.Combine(Launcher.GetUsermapsDirectory(), mapName);
 		  string path2_1 = mapName + ".ff";
 		  string path2_2 = mapName + "_load.ff";
-		  Launcher.MoveFile(Path.Combine(zoneDirectory, path2_1), Path.Combine(path1, path2_1));
-		  Launcher.MoveFile(Path.Combine(zoneDirectory, "localized_" + path2_1), Path.Combine(path1, "localized_" + path2_1));
-		  Launcher.MoveFile(Path.Combine(zoneDirectory, path2_2), Path.Combine(path1, path2_2));
+			Utils.FileSystem.MoveFile(Path.Combine(zoneDirectory, path2_1), Path.Combine(path1, path2_1));
+			Utils.FileSystem.MoveFile(Path.Combine(zoneDirectory, "localized_" + path2_1), Path.Combine(path1, "localized_" + path2_1));
+			Utils.FileSystem.MoveFile(Path.Combine(zoneDirectory, path2_2), Path.Combine(path1, path2_2));
 		  Launcher.Publish();
 		  CompileLevelRunGameDelegate(lastProcess);
 		}
@@ -546,11 +512,6 @@ namespace Launcher
 		  }
 		}
 
-		private void exporterTutorialToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-		  Process.Start(Launcher.GetRootDirectory() + "/bin/maya/tutorial/trashcan_metal/Treyarch_trashcan_metal_directions01sm.pdf");
-		}
-
 		public int FindLauncherConsoleText(string text, int start, int end)
 		{
 		  int launcherConsoleText = -1;
@@ -582,11 +543,6 @@ namespace Launcher
 		  foreach (ComboBox dvarComboBox in dvarComboBoxes)
 			stringBuilder.Append(FormatDVar(dvarComboBox));
 		  return stringBuilder.ToString();
-		}
-
-		private void gameDirToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-		  Process.Start(Launcher.GetRootDirectory());
 		}
 
 		private string GetDestinationBsp()
@@ -626,2239 +582,2144 @@ namespace Launcher
 
 		private void InitializeComponent()
 		{
-			components = new System.ComponentModel.Container();
+			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainWindow));
-			LauncherConsole = new System.Windows.Forms.RichTextBox();
-			LauncherSplitter = new System.Windows.Forms.SplitContainer();
-			panel1 = new System.Windows.Forms.Panel();
-			LauncherRunGameCustomCommandLineGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherRunGameCustomCommandLineCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherRunGameCustomCommandLineTextBox = new System.Windows.Forms.TextBox();
-			LauncherRunGameGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherRunGameMapNameTextBox = new System.Windows.Forms.TextBox();
-			LauncherRunGameLogfileBox = new System.Windows.Forms.CheckBox();
-			LauncherRunGameDeveloperBox = new System.Windows.Forms.CheckBox();
-			LauncherRunGameMapNameLabel = new System.Windows.Forms.Label();
-			LauncherRunGameButton = new System.Windows.Forms.Button();
-			LauncherRunGameCustomCommandLineMPGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherRunGameCustomCommandLineMPCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherRunGameCustomCommandLineMPTextBox = new System.Windows.Forms.TextBox();
-			LauncherRunGameModGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherRunGameModComboBox = new System.Windows.Forms.ComboBox();
-			LauncherRunGameCommandLineTextBox = new System.Windows.Forms.TextBox();
-			LauncherIconBlops = new System.Windows.Forms.PictureBox();
-			LauncherGameGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherGameLogfileBox = new System.Windows.Forms.CheckBox();
-			LauncherGameDeveloperBox = new System.Windows.Forms.CheckBox();
-			LauncherIconMP = new System.Windows.Forms.PictureBox();
-			LauncherIconSP = new System.Windows.Forms.PictureBox();
-			LauncherButtonMP = new System.Windows.Forms.Button();
-			LauncherButtonSP = new System.Windows.Forms.Button();
-			LauncherTab = new System.Windows.Forms.TabControl();
-			LauncherTabModBuilder = new System.Windows.Forms.TabPage();
-			LauncherIwdFileGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherIwdFileTree = new System.Windows.Forms.TreeView();
-			LauncherModGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherModFolderGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherModFolderViewButton = new System.Windows.Forms.Button();
-			LauncherModBuildGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherModBuildLinkerOptionsTextBox = new System.Windows.Forms.TextBox();
-			LauncherModBuildLinkerOptionsLabel = new System.Windows.Forms.Label();
-			LauncherModVerboseCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherModBuildFastFilesCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherModBuildIwdFileCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherModBuildButton = new System.Windows.Forms.Button();
-			LauncherModBuildSoundsCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherModZoneSourceGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherModZoneSourceCSVButton = new System.Windows.Forms.Button();
-			LauncherModZoneSourceMissingAssetsButton = new System.Windows.Forms.Button();
-			LauncherEditZoneSourceButton = new System.Windows.Forms.Button();
-			LauncherModComboBox = new System.Windows.Forms.ComboBox();
-			LauncherTabCompileLevel = new System.Windows.Forms.TabPage();
-			LauncherMapType = new System.Windows.Forms.Label();
-			LauncherMapTypeList = new System.Windows.Forms.ComboBox();
-			LauncherCreateMapButton = new System.Windows.Forms.Button();
-			LauncherDeleteMapButton = new System.Windows.Forms.Button();
-			LauncherCompileLevelOptionsGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherCompileReflectionsCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherGridFileGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherGridEditExistingButton = new System.Windows.Forms.Button();
-			LauncherGridMakeNewButton = new System.Windows.Forms.Button();
-			LauncherGridCollectDotsCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherModSpecificMapComboBox = new System.Windows.Forms.ComboBox();
-			LauncherModSpecificMapCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherCustomRunOptionsLabel = new System.Windows.Forms.Label();
-			LauncherCustomRunOptionsTextBox = new System.Windows.Forms.TextBox();
-			label = new System.Windows.Forms.Label();
-			LauncherCompileLevelButton = new System.Windows.Forms.Button();
-			LauncherCompileLightsButton = new System.Windows.Forms.Button();
-			LauncherCompileBSPButton = new System.Windows.Forms.Button();
-			LauncherUseRunGameTypeOptionsCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherRunMapAfterCompileCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherBspInfoCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherBuildFastFilesCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherConnectPathsCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherCompileLightsCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherCompileBSPCheckBox = new System.Windows.Forms.CheckBox();
-			LauncherMapList = new System.Windows.Forms.ListBox();
-			LauncherTabExplore = new System.Windows.Forms.TabPage();
-			LauncherExploreGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherExploreRawMapsDirGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherExploreRawGSCDirMPGametypesButton = new System.Windows.Forms.Button();
-			LauncherExploreRawGSCDirMPFXButton = new System.Windows.Forms.Button();
-			LauncherExploreRawGSCDirMPArtButton = new System.Windows.Forms.Button();
-			LauncherExploreRawGSCDirMPButton = new System.Windows.Forms.Button();
-			LauncherExploreRawGSCDirSPVoiceButton = new System.Windows.Forms.Button();
-			LauncherExploreRawGSCDirSPGametypesButton = new System.Windows.Forms.Button();
-			LauncherExploreRawGSCDirSPFXButton = new System.Windows.Forms.Button();
-			LauncherExploreRawGSCDirSPArtButton = new System.Windows.Forms.Button();
-			LauncherExploreRawGSCDirSPButton = new System.Windows.Forms.Button();
-			LauncherExploreRawDirGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherExploreRawDirFXButton = new System.Windows.Forms.Button();
-			LauncherExploreRawDirMPButton = new System.Windows.Forms.Button();
-			LauncherExploreRawDirWeaponsButton = new System.Windows.Forms.Button();
-			LauncherExploreRawDirVisionButton = new System.Windows.Forms.Button();
-			LauncherExploreRawDirLocsButton = new System.Windows.Forms.Button();
-			LauncherExploreRawDirAnimTreesButton = new System.Windows.Forms.Button();
-			LauncherExploreRawDirSoundAliasesButton = new System.Windows.Forms.Button();
-			LauncherExploreRawDirCSCButton = new System.Windows.Forms.Button();
-			LauncherExploreRawDirGSCButton = new System.Windows.Forms.Button();
-			LauncherExploreDevDirGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherExploreDevDirRawButton = new System.Windows.Forms.Button();
-			LauncherExploreDevDirModelExportButton = new System.Windows.Forms.Button();
-			LauncherExploreDevDirTextureAssetsButton = new System.Windows.Forms.Button();
-			LauncherExploreDevDirSrcDataButton = new System.Windows.Forms.Button();
-			LauncherExploreDevDirMapSrcButton = new System.Windows.Forms.Button();
-			LauncherExploreDevDirBinButton = new System.Windows.Forms.Button();
-			LauncherExploreDevDirZoneSourceButton = new System.Windows.Forms.Button();
-			LauncherExploreBlopsDirGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherExploreBlopsDirConfigsButton = new System.Windows.Forms.Button();
-			LauncherExploreBlopsDirModsButton = new System.Windows.Forms.Button();
-			LauncherExploreBlopsDirGameButton = new System.Windows.Forms.Button();
-			LauncherApplicationsGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherIconRadiant = new System.Windows.Forms.PictureBox();
-			LauncherIconEffectsEditor = new System.Windows.Forms.PictureBox();
-			LauncherIconConverter = new System.Windows.Forms.PictureBox();
-			LauncherIconAssetViewer = new System.Windows.Forms.PictureBox();
-			LauncherIconAssetManager = new System.Windows.Forms.PictureBox();
-			LauncherButtonAssetViewer = new System.Windows.Forms.Button();
-			LauncherButtonRunConverter = new System.Windows.Forms.Button();
-			LauncherButtonAssetManager = new System.Windows.Forms.Button();
-			LauncherButtonEffectsEd = new System.Windows.Forms.Button();
-			LauncherButtonRadiant = new System.Windows.Forms.Button();
-			LauncherWarningsCounter = new System.Windows.Forms.Label();
-			LauncherWarningsNumericUpDown = new System.Windows.Forms.NumericUpDown();
-			LauncherWarningsPictureBox = new System.Windows.Forms.PictureBox();
-			LauncherWarningsLabel = new System.Windows.Forms.Label();
-			LauncherErrorsCounter = new System.Windows.Forms.Label();
-			LauncherErrorsNumericUpDown = new System.Windows.Forms.NumericUpDown();
-			LauncherErrorsPictureBox = new System.Windows.Forms.PictureBox();
-			LauncherErrorsLabel = new System.Windows.Forms.Label();
-			LauncherScrollBottomConsoleButton = new System.Windows.Forms.Button();
-			LauncherSaveConsoleButton = new System.Windows.Forms.Button();
-			LauncherProcessTimeElapsedTextBox = new System.Windows.Forms.TextBox();
-			LauncherClearConsoleButton = new System.Windows.Forms.Button();
-			LauncherProcessGroupBox = new System.Windows.Forms.GroupBox();
-			LauncherButtonCancel = new System.Windows.Forms.Button();
-			LauncherProcessList = new System.Windows.Forms.ListBox();
-			LauncherProcessTextBox = new System.Windows.Forms.TextBox();
-			LauncherTimer = new System.Windows.Forms.Timer(components);
-			LauncherMapFilesSystemWatcher = new System.IO.FileSystemWatcher();
-			LauncherModsDirectorySystemWatcher = new System.IO.FileSystemWatcher();
-			menuStrip1 = new System.Windows.Forms.MenuStrip();
-			LauncherfileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			newModToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			LaunchernewMapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
-			gameDirToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-			LauncherexitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			LauncherdocsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			mayaExporterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			exporterTutorialToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			LaunchertoolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			mayaPluginSetupToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			LauncherhelpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			LauncherwikiToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			LauncherRadiantToolTip = new System.Windows.Forms.ToolTip(components);
-			LauncherEffectsEdToolTip = new System.Windows.Forms.ToolTip(components);
-			LauncherAssetManagerToolTip = new System.Windows.Forms.ToolTip(components);
-			LauncherAssetViewerToolTip = new System.Windows.Forms.ToolTip(components);
-			LauncherConverterToolTip = new System.Windows.Forms.ToolTip(components);
-			SaveConsoleToolTip = new System.Windows.Forms.ToolTip(components);
-			LauncherScrollBottomConsoleToolTip = new System.Windows.Forms.ToolTip(components);
-			LauncherMapListContextMenuStrip = new System.Windows.Forms.ContextMenuStrip(components);
-			runToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
-			deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			renameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			((System.ComponentModel.ISupportInitialize)(LauncherSplitter)).BeginInit();
-			LauncherSplitter.Panel1.SuspendLayout();
-			LauncherSplitter.Panel2.SuspendLayout();
-			LauncherSplitter.SuspendLayout();
-			panel1.SuspendLayout();
-			LauncherRunGameCustomCommandLineGroupBox.SuspendLayout();
-			LauncherRunGameGroupBox.SuspendLayout();
-			LauncherRunGameCustomCommandLineMPGroupBox.SuspendLayout();
-			LauncherRunGameModGroupBox.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconBlops)).BeginInit();
-			LauncherGameGroupBox.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconMP)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconSP)).BeginInit();
-			LauncherTab.SuspendLayout();
-			LauncherTabModBuilder.SuspendLayout();
-			LauncherIwdFileGroupBox.SuspendLayout();
-			LauncherModGroupBox.SuspendLayout();
-			LauncherModFolderGroupBox.SuspendLayout();
-			LauncherModBuildGroupBox.SuspendLayout();
-			LauncherModZoneSourceGroupBox.SuspendLayout();
-			LauncherTabCompileLevel.SuspendLayout();
-			LauncherCompileLevelOptionsGroupBox.SuspendLayout();
-			LauncherGridFileGroupBox.SuspendLayout();
-			LauncherTabExplore.SuspendLayout();
-			LauncherExploreGroupBox.SuspendLayout();
-			LauncherExploreRawMapsDirGroupBox.SuspendLayout();
-			LauncherExploreRawDirGroupBox.SuspendLayout();
-			LauncherExploreDevDirGroupBox.SuspendLayout();
-			LauncherExploreBlopsDirGroupBox.SuspendLayout();
-			LauncherApplicationsGroupBox.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconRadiant)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconEffectsEditor)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconConverter)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconAssetViewer)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconAssetManager)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherWarningsNumericUpDown)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherWarningsPictureBox)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherErrorsNumericUpDown)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherErrorsPictureBox)).BeginInit();
-			LauncherProcessGroupBox.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(LauncherMapFilesSystemWatcher)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherModsDirectorySystemWatcher)).BeginInit();
-			menuStrip1.SuspendLayout();
-			LauncherMapListContextMenuStrip.SuspendLayout();
-			SuspendLayout();
+			this.LauncherConsole = new System.Windows.Forms.RichTextBox();
+			this.LauncherSplitter = new System.Windows.Forms.SplitContainer();
+			this.panel1 = new System.Windows.Forms.Panel();
+			this.LauncherRunGameCustomCommandLineGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherRunGameCustomCommandLineCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherRunGameCustomCommandLineTextBox = new System.Windows.Forms.TextBox();
+			this.LauncherRunGameGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherRunGameMapNameTextBox = new System.Windows.Forms.TextBox();
+			this.LauncherRunGameLogfileBox = new System.Windows.Forms.CheckBox();
+			this.LauncherRunGameDeveloperBox = new System.Windows.Forms.CheckBox();
+			this.LauncherRunGameMapNameLabel = new System.Windows.Forms.Label();
+			this.LauncherRunGameButton = new System.Windows.Forms.Button();
+			this.LauncherRunGameCustomCommandLineMPGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherRunGameCustomCommandLineMPCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherRunGameCustomCommandLineMPTextBox = new System.Windows.Forms.TextBox();
+			this.LauncherRunGameModGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherRunGameModComboBox = new System.Windows.Forms.ComboBox();
+			this.LauncherRunGameCommandLineTextBox = new System.Windows.Forms.TextBox();
+			this.LauncherIconBlops = new System.Windows.Forms.PictureBox();
+			this.LauncherGameGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherGameLogfileBox = new System.Windows.Forms.CheckBox();
+			this.LauncherGameDeveloperBox = new System.Windows.Forms.CheckBox();
+			this.LauncherIconMP = new System.Windows.Forms.PictureBox();
+			this.LauncherIconSP = new System.Windows.Forms.PictureBox();
+			this.LauncherButtonMP = new System.Windows.Forms.Button();
+			this.LauncherButtonSP = new System.Windows.Forms.Button();
+			this.LauncherTab = new System.Windows.Forms.TabControl();
+			this.LauncherTabModBuilder = new System.Windows.Forms.TabPage();
+			this.LauncherIwdFileGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherIwdFileTree = new System.Windows.Forms.TreeView();
+			this.LauncherModGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherModFolderGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherModFolderViewButton = new System.Windows.Forms.Button();
+			this.LauncherModBuildGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherModBuildLinkerOptionsTextBox = new System.Windows.Forms.TextBox();
+			this.LauncherModBuildLinkerOptionsLabel = new System.Windows.Forms.Label();
+			this.LauncherModVerboseCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherModBuildFastFilesCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherModBuildIwdFileCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherModBuildButton = new System.Windows.Forms.Button();
+			this.LauncherModBuildSoundsCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherModZoneSourceGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherModZoneSourceCSVButton = new System.Windows.Forms.Button();
+			this.LauncherModZoneSourceMissingAssetsButton = new System.Windows.Forms.Button();
+			this.LauncherEditZoneSourceButton = new System.Windows.Forms.Button();
+			this.LauncherModComboBox = new System.Windows.Forms.ComboBox();
+			this.LauncherTabCompileLevel = new System.Windows.Forms.TabPage();
+			this.LauncherMapType = new System.Windows.Forms.Label();
+			this.LauncherMapTypeList = new System.Windows.Forms.ComboBox();
+			this.LauncherCreateMapButton = new System.Windows.Forms.Button();
+			this.LauncherDeleteMapButton = new System.Windows.Forms.Button();
+			this.LauncherCompileLevelOptionsGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherCompileReflectionsCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherGridFileGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherGridEditExistingButton = new System.Windows.Forms.Button();
+			this.LauncherGridMakeNewButton = new System.Windows.Forms.Button();
+			this.LauncherGridCollectDotsCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherModSpecificMapComboBox = new System.Windows.Forms.ComboBox();
+			this.LauncherModSpecificMapCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherCustomRunOptionsLabel = new System.Windows.Forms.Label();
+			this.LauncherCustomRunOptionsTextBox = new System.Windows.Forms.TextBox();
+			this.label = new System.Windows.Forms.Label();
+			this.LauncherCompileLevelButton = new System.Windows.Forms.Button();
+			this.LauncherCompileLightsButton = new System.Windows.Forms.Button();
+			this.LauncherCompileBSPButton = new System.Windows.Forms.Button();
+			this.LauncherUseRunGameTypeOptionsCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherRunMapAfterCompileCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherBspInfoCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherBuildFastFilesCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherConnectPathsCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherCompileLightsCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherCompileBSPCheckBox = new System.Windows.Forms.CheckBox();
+			this.LauncherMapList = new System.Windows.Forms.ListBox();
+			this.LauncherTabExplore = new System.Windows.Forms.TabPage();
+			this.LauncherExploreGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherExploreRawMapsDirGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherExploreRawGSCDirMPGametypesButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawGSCDirMPFXButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawGSCDirMPArtButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawGSCDirMPButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawGSCDirSPVoiceButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawGSCDirSPGametypesButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawGSCDirSPFXButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawGSCDirSPArtButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawGSCDirSPButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawDirGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherExploreRawDirFXButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawDirMPButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawDirWeaponsButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawDirVisionButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawDirLocsButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawDirAnimTreesButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawDirSoundAliasesButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawDirCSCButton = new System.Windows.Forms.Button();
+			this.LauncherExploreRawDirGSCButton = new System.Windows.Forms.Button();
+			this.LauncherExploreDevDirGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherExploreDevDirRawButton = new System.Windows.Forms.Button();
+			this.LauncherExploreDevDirModelExportButton = new System.Windows.Forms.Button();
+			this.LauncherExploreDevDirTextureAssetsButton = new System.Windows.Forms.Button();
+			this.LauncherExploreDevDirSrcDataButton = new System.Windows.Forms.Button();
+			this.LauncherExploreDevDirMapSrcButton = new System.Windows.Forms.Button();
+			this.LauncherExploreDevDirBinButton = new System.Windows.Forms.Button();
+			this.LauncherExploreDevDirZoneSourceButton = new System.Windows.Forms.Button();
+			this.LauncherExploreBlopsDirGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherExploreBlopsDirConfigsButton = new System.Windows.Forms.Button();
+			this.LauncherExploreBlopsDirModsButton = new System.Windows.Forms.Button();
+			this.LauncherExploreBlopsDirGameButton = new System.Windows.Forms.Button();
+			this.LauncherApplicationsGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherIconRadiant = new System.Windows.Forms.PictureBox();
+			this.LauncherIconEffectsEditor = new System.Windows.Forms.PictureBox();
+			this.LauncherIconConverter = new System.Windows.Forms.PictureBox();
+			this.LauncherIconAssetViewer = new System.Windows.Forms.PictureBox();
+			this.LauncherIconAssetManager = new System.Windows.Forms.PictureBox();
+			this.LauncherButtonAssetViewer = new System.Windows.Forms.Button();
+			this.LauncherButtonRunConverter = new System.Windows.Forms.Button();
+			this.LauncherButtonAssetManager = new System.Windows.Forms.Button();
+			this.LauncherButtonEffectsEd = new System.Windows.Forms.Button();
+			this.LauncherButtonRadiant = new System.Windows.Forms.Button();
+			this.LauncherWarningsCounter = new System.Windows.Forms.Label();
+			this.LauncherWarningsNumericUpDown = new System.Windows.Forms.NumericUpDown();
+			this.LauncherWarningsPictureBox = new System.Windows.Forms.PictureBox();
+			this.LauncherWarningsLabel = new System.Windows.Forms.Label();
+			this.LauncherErrorsCounter = new System.Windows.Forms.Label();
+			this.LauncherErrorsNumericUpDown = new System.Windows.Forms.NumericUpDown();
+			this.LauncherErrorsPictureBox = new System.Windows.Forms.PictureBox();
+			this.LauncherErrorsLabel = new System.Windows.Forms.Label();
+			this.LauncherScrollBottomConsoleButton = new System.Windows.Forms.Button();
+			this.LauncherSaveConsoleButton = new System.Windows.Forms.Button();
+			this.LauncherProcessTimeElapsedTextBox = new System.Windows.Forms.TextBox();
+			this.LauncherClearConsoleButton = new System.Windows.Forms.Button();
+			this.LauncherProcessGroupBox = new System.Windows.Forms.GroupBox();
+			this.LauncherButtonCancel = new System.Windows.Forms.Button();
+			this.LauncherProcessList = new System.Windows.Forms.ListBox();
+			this.LauncherProcessTextBox = new System.Windows.Forms.TextBox();
+			this.LauncherTimer = new System.Windows.Forms.Timer(this.components);
+			this.LauncherMapFilesSystemWatcher = new System.IO.FileSystemWatcher();
+			this.LauncherModsDirectorySystemWatcher = new System.IO.FileSystemWatcher();
+			this.menuStrip1 = new System.Windows.Forms.MenuStrip();
+			this.LauncherfileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.newModToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+			this.gameDirToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+			this.LauncherexitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.LauncherdocsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.mayaExporterToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.exporterTutorialToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.LaunchertoolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.mayaPluginSetupToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.LauncherhelpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.LauncherwikiToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.LauncherRadiantToolTip = new System.Windows.Forms.ToolTip(this.components);
+			this.LauncherEffectsEdToolTip = new System.Windows.Forms.ToolTip(this.components);
+			this.LauncherAssetManagerToolTip = new System.Windows.Forms.ToolTip(this.components);
+			this.LauncherAssetViewerToolTip = new System.Windows.Forms.ToolTip(this.components);
+			this.LauncherConverterToolTip = new System.Windows.Forms.ToolTip(this.components);
+			this.SaveConsoleToolTip = new System.Windows.Forms.ToolTip(this.components);
+			this.LauncherScrollBottomConsoleToolTip = new System.Windows.Forms.ToolTip(this.components);
+			this.LauncherMapListContextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
+			this.runToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+			this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.renameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherSplitter)).BeginInit();
+			this.LauncherSplitter.Panel1.SuspendLayout();
+			this.LauncherSplitter.Panel2.SuspendLayout();
+			this.LauncherSplitter.SuspendLayout();
+			this.panel1.SuspendLayout();
+			this.LauncherRunGameCustomCommandLineGroupBox.SuspendLayout();
+			this.LauncherRunGameGroupBox.SuspendLayout();
+			this.LauncherRunGameCustomCommandLineMPGroupBox.SuspendLayout();
+			this.LauncherRunGameModGroupBox.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconBlops)).BeginInit();
+			this.LauncherGameGroupBox.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconMP)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconSP)).BeginInit();
+			this.LauncherTab.SuspendLayout();
+			this.LauncherTabModBuilder.SuspendLayout();
+			this.LauncherIwdFileGroupBox.SuspendLayout();
+			this.LauncherModGroupBox.SuspendLayout();
+			this.LauncherModFolderGroupBox.SuspendLayout();
+			this.LauncherModBuildGroupBox.SuspendLayout();
+			this.LauncherModZoneSourceGroupBox.SuspendLayout();
+			this.LauncherTabCompileLevel.SuspendLayout();
+			this.LauncherCompileLevelOptionsGroupBox.SuspendLayout();
+			this.LauncherGridFileGroupBox.SuspendLayout();
+			this.LauncherTabExplore.SuspendLayout();
+			this.LauncherExploreGroupBox.SuspendLayout();
+			this.LauncherExploreRawMapsDirGroupBox.SuspendLayout();
+			this.LauncherExploreRawDirGroupBox.SuspendLayout();
+			this.LauncherExploreDevDirGroupBox.SuspendLayout();
+			this.LauncherExploreBlopsDirGroupBox.SuspendLayout();
+			this.LauncherApplicationsGroupBox.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconRadiant)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconEffectsEditor)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconConverter)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconAssetViewer)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconAssetManager)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherWarningsNumericUpDown)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherWarningsPictureBox)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherErrorsNumericUpDown)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherErrorsPictureBox)).BeginInit();
+			this.LauncherProcessGroupBox.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherMapFilesSystemWatcher)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherModsDirectorySystemWatcher)).BeginInit();
+			this.menuStrip1.SuspendLayout();
+			this.LauncherMapListContextMenuStrip.SuspendLayout();
+			this.SuspendLayout();
 			// 
 			// LauncherConsole
 			// 
-			LauncherConsole.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherConsole.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherConsole.BackColor = System.Drawing.SystemColors.InfoText;
-			LauncherConsole.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			LauncherConsole.ForeColor = System.Drawing.SystemColors.ScrollBar;
-			LauncherConsole.Location = new System.Drawing.Point(149, 3);
-			LauncherConsole.Name = "LauncherConsole";
-			LauncherConsole.ReadOnly = true;
-			LauncherConsole.Size = new System.Drawing.Size(802, 242);
-			LauncherConsole.TabIndex = 0;
-			LauncherConsole.Text = "";
-			LauncherConsole.WordWrap = false;
+			this.LauncherConsole.BackColor = System.Drawing.SystemColors.InfoText;
+			this.LauncherConsole.Font = new System.Drawing.Font("Courier New", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this.LauncherConsole.ForeColor = System.Drawing.SystemColors.ScrollBar;
+			this.LauncherConsole.Location = new System.Drawing.Point(149, 3);
+			this.LauncherConsole.Name = "LauncherConsole";
+			this.LauncherConsole.ReadOnly = true;
+			this.LauncherConsole.Size = new System.Drawing.Size(802, 242);
+			this.LauncherConsole.TabIndex = 0;
+			this.LauncherConsole.Text = "";
+			this.LauncherConsole.WordWrap = false;
 			// 
 			// LauncherSplitter
 			// 
-			LauncherSplitter.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherSplitter.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherSplitter.BackColor = System.Drawing.SystemColors.Control;
-			LauncherSplitter.FixedPanel = System.Windows.Forms.FixedPanel.Panel1;
-			LauncherSplitter.Location = new System.Drawing.Point(12, 23);
-			LauncherSplitter.Name = "LauncherSplitter";
-			LauncherSplitter.Orientation = System.Windows.Forms.Orientation.Horizontal;
+			this.LauncherSplitter.BackColor = System.Drawing.SystemColors.Control;
+			this.LauncherSplitter.FixedPanel = System.Windows.Forms.FixedPanel.Panel1;
+			this.LauncherSplitter.Location = new System.Drawing.Point(12, 23);
+			this.LauncherSplitter.Name = "LauncherSplitter";
+			this.LauncherSplitter.Orientation = System.Windows.Forms.Orientation.Horizontal;
 			// 
 			// LauncherSplitter.Panel1
 			// 
-			LauncherSplitter.Panel1.Controls.Add(panel1);
-			LauncherSplitter.Panel1.Controls.Add(LauncherRunGameCommandLineTextBox);
-			LauncherSplitter.Panel1.Controls.Add(LauncherIconBlops);
-			LauncherSplitter.Panel1.Controls.Add(LauncherGameGroupBox);
-			LauncherSplitter.Panel1.Controls.Add(LauncherTab);
-			LauncherSplitter.Panel1.Controls.Add(LauncherApplicationsGroupBox);
-			LauncherSplitter.Panel1MinSize = 380;
+			this.LauncherSplitter.Panel1.Controls.Add(this.panel1);
+			this.LauncherSplitter.Panel1.Controls.Add(this.LauncherRunGameCommandLineTextBox);
+			this.LauncherSplitter.Panel1.Controls.Add(this.LauncherIconBlops);
+			this.LauncherSplitter.Panel1.Controls.Add(this.LauncherGameGroupBox);
+			this.LauncherSplitter.Panel1.Controls.Add(this.LauncherTab);
+			this.LauncherSplitter.Panel1.Controls.Add(this.LauncherApplicationsGroupBox);
+			this.LauncherSplitter.Panel1MinSize = 380;
 			// 
 			// LauncherSplitter.Panel2
 			// 
-			LauncherSplitter.Panel2.Controls.Add(LauncherWarningsCounter);
-			LauncherSplitter.Panel2.Controls.Add(LauncherWarningsNumericUpDown);
-			LauncherSplitter.Panel2.Controls.Add(LauncherWarningsPictureBox);
-			LauncherSplitter.Panel2.Controls.Add(LauncherWarningsLabel);
-			LauncherSplitter.Panel2.Controls.Add(LauncherErrorsCounter);
-			LauncherSplitter.Panel2.Controls.Add(LauncherErrorsNumericUpDown);
-			LauncherSplitter.Panel2.Controls.Add(LauncherErrorsPictureBox);
-			LauncherSplitter.Panel2.Controls.Add(LauncherErrorsLabel);
-			LauncherSplitter.Panel2.Controls.Add(LauncherScrollBottomConsoleButton);
-			LauncherSplitter.Panel2.Controls.Add(LauncherSaveConsoleButton);
-			LauncherSplitter.Panel2.Controls.Add(LauncherProcessTimeElapsedTextBox);
-			LauncherSplitter.Panel2.Controls.Add(LauncherConsole);
-			LauncherSplitter.Panel2.Controls.Add(LauncherClearConsoleButton);
-			LauncherSplitter.Panel2.Controls.Add(LauncherProcessGroupBox);
-			LauncherSplitter.Panel2.Controls.Add(LauncherProcessTextBox);
-			LauncherSplitter.Panel2MinSize = 100;
-			LauncherSplitter.Size = new System.Drawing.Size(954, 653);
-			LauncherSplitter.SplitterDistance = 380;
-			LauncherSplitter.TabIndex = 1;
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherWarningsCounter);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherWarningsNumericUpDown);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherWarningsPictureBox);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherWarningsLabel);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherErrorsCounter);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherErrorsNumericUpDown);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherErrorsPictureBox);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherErrorsLabel);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherScrollBottomConsoleButton);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherSaveConsoleButton);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherProcessTimeElapsedTextBox);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherConsole);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherClearConsoleButton);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherProcessGroupBox);
+			this.LauncherSplitter.Panel2.Controls.Add(this.LauncherProcessTextBox);
+			this.LauncherSplitter.Panel2MinSize = 100;
+			this.LauncherSplitter.Size = new System.Drawing.Size(954, 653);
+			this.LauncherSplitter.SplitterDistance = 380;
+			this.LauncherSplitter.TabIndex = 1;
 			// 
 			// panel1
 			// 
-			panel1.Controls.Add(LauncherRunGameCustomCommandLineGroupBox);
-			panel1.Controls.Add(LauncherRunGameGroupBox);
-			panel1.Controls.Add(LauncherRunGameCustomCommandLineMPGroupBox);
-			panel1.Controls.Add(LauncherRunGameModGroupBox);
-			panel1.Dock = System.Windows.Forms.DockStyle.Right;
-			panel1.Location = new System.Drawing.Point(804, 0);
-			panel1.Name = "panel1";
-			panel1.Size = new System.Drawing.Size(150, 380);
-			panel1.TabIndex = 10;
+			this.panel1.Controls.Add(this.LauncherRunGameCustomCommandLineGroupBox);
+			this.panel1.Controls.Add(this.LauncherRunGameGroupBox);
+			this.panel1.Controls.Add(this.LauncherRunGameCustomCommandLineMPGroupBox);
+			this.panel1.Controls.Add(this.LauncherRunGameModGroupBox);
+			this.panel1.Dock = System.Windows.Forms.DockStyle.Right;
+			this.panel1.Location = new System.Drawing.Point(804, 0);
+			this.panel1.Name = "panel1";
+			this.panel1.Size = new System.Drawing.Size(150, 380);
+			this.panel1.TabIndex = 10;
 			// 
 			// LauncherRunGameCustomCommandLineGroupBox
 			// 
-			LauncherRunGameCustomCommandLineGroupBox.Controls.Add(LauncherRunGameCustomCommandLineCheckBox);
-			LauncherRunGameCustomCommandLineGroupBox.Controls.Add(LauncherRunGameCustomCommandLineTextBox);
-			LauncherRunGameCustomCommandLineGroupBox.Location = new System.Drawing.Point(3, 49);
-			LauncherRunGameCustomCommandLineGroupBox.Name = "LauncherRunGameCustomCommandLineGroupBox";
-			LauncherRunGameCustomCommandLineGroupBox.Size = new System.Drawing.Size(145, 63);
-			LauncherRunGameCustomCommandLineGroupBox.TabIndex = 4;
-			LauncherRunGameCustomCommandLineGroupBox.TabStop = false;
-			LauncherRunGameCustomCommandLineGroupBox.Text = "Singleplayer Options";
+			this.LauncherRunGameCustomCommandLineGroupBox.Controls.Add(this.LauncherRunGameCustomCommandLineCheckBox);
+			this.LauncherRunGameCustomCommandLineGroupBox.Controls.Add(this.LauncherRunGameCustomCommandLineTextBox);
+			this.LauncherRunGameCustomCommandLineGroupBox.Location = new System.Drawing.Point(3, 49);
+			this.LauncherRunGameCustomCommandLineGroupBox.Name = "LauncherRunGameCustomCommandLineGroupBox";
+			this.LauncherRunGameCustomCommandLineGroupBox.Size = new System.Drawing.Size(145, 63);
+			this.LauncherRunGameCustomCommandLineGroupBox.TabIndex = 4;
+			this.LauncherRunGameCustomCommandLineGroupBox.TabStop = false;
+			this.LauncherRunGameCustomCommandLineGroupBox.Text = "Singleplayer Options";
 			// 
 			// LauncherRunGameCustomCommandLineCheckBox
 			// 
-			LauncherRunGameCustomCommandLineCheckBox.AutoSize = true;
-			LauncherRunGameCustomCommandLineCheckBox.Location = new System.Drawing.Point(6, 15);
-			LauncherRunGameCustomCommandLineCheckBox.Name = "LauncherRunGameCustomCommandLineCheckBox";
-			LauncherRunGameCustomCommandLineCheckBox.Size = new System.Drawing.Size(65, 17);
-			LauncherRunGameCustomCommandLineCheckBox.TabIndex = 1;
-			LauncherRunGameCustomCommandLineCheckBox.Text = "Enabled";
-			LauncherRunGameCustomCommandLineCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherRunGameCustomCommandLineCheckBox.AutoSize = true;
+			this.LauncherRunGameCustomCommandLineCheckBox.Location = new System.Drawing.Point(6, 15);
+			this.LauncherRunGameCustomCommandLineCheckBox.Name = "LauncherRunGameCustomCommandLineCheckBox";
+			this.LauncherRunGameCustomCommandLineCheckBox.Size = new System.Drawing.Size(65, 17);
+			this.LauncherRunGameCustomCommandLineCheckBox.TabIndex = 1;
+			this.LauncherRunGameCustomCommandLineCheckBox.Text = "Enabled";
+			this.LauncherRunGameCustomCommandLineCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherRunGameCustomCommandLineTextBox
 			// 
-			LauncherRunGameCustomCommandLineTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherRunGameCustomCommandLineTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherRunGameCustomCommandLineTextBox.Location = new System.Drawing.Point(6, 37);
-			LauncherRunGameCustomCommandLineTextBox.Name = "LauncherRunGameCustomCommandLineTextBox";
-			LauncherRunGameCustomCommandLineTextBox.Size = new System.Drawing.Size(136, 20);
-			LauncherRunGameCustomCommandLineTextBox.TabIndex = 0;
-			LauncherRunGameCustomCommandLineTextBox.TextChanged += new System.EventHandler(LauncherRunGameCustomCommandLineTextBox_TextChanged);
-			LauncherRunGameCustomCommandLineTextBox.Validating += new System.ComponentModel.CancelEventHandler(LauncherRunGameCustomCommandLineTextBox_Validating);
+			this.LauncherRunGameCustomCommandLineTextBox.Location = new System.Drawing.Point(6, 37);
+			this.LauncherRunGameCustomCommandLineTextBox.Name = "LauncherRunGameCustomCommandLineTextBox";
+			this.LauncherRunGameCustomCommandLineTextBox.Size = new System.Drawing.Size(136, 20);
+			this.LauncherRunGameCustomCommandLineTextBox.TabIndex = 0;
+			this.LauncherRunGameCustomCommandLineTextBox.TextChanged += new System.EventHandler(this.LauncherRunGameCustomCommandLineTextBox_TextChanged);
+			this.LauncherRunGameCustomCommandLineTextBox.Validating += new System.ComponentModel.CancelEventHandler(this.LauncherRunGameCustomCommandLineTextBox_Validating);
 			// 
 			// LauncherRunGameGroupBox
 			// 
-			LauncherRunGameGroupBox.Controls.Add(LauncherRunGameMapNameTextBox);
-			LauncherRunGameGroupBox.Controls.Add(LauncherRunGameLogfileBox);
-			LauncherRunGameGroupBox.Controls.Add(LauncherRunGameDeveloperBox);
-			LauncherRunGameGroupBox.Controls.Add(LauncherRunGameMapNameLabel);
-			LauncherRunGameGroupBox.Controls.Add(LauncherRunGameButton);
-			LauncherRunGameGroupBox.Location = new System.Drawing.Point(3, 181);
-			LauncherRunGameGroupBox.Name = "LauncherRunGameGroupBox";
-			LauncherRunGameGroupBox.Size = new System.Drawing.Size(145, 93);
-			LauncherRunGameGroupBox.TabIndex = 11;
-			LauncherRunGameGroupBox.TabStop = false;
-			LauncherRunGameGroupBox.Text = "Run";
+			this.LauncherRunGameGroupBox.Controls.Add(this.LauncherRunGameMapNameTextBox);
+			this.LauncherRunGameGroupBox.Controls.Add(this.LauncherRunGameLogfileBox);
+			this.LauncherRunGameGroupBox.Controls.Add(this.LauncherRunGameDeveloperBox);
+			this.LauncherRunGameGroupBox.Controls.Add(this.LauncherRunGameMapNameLabel);
+			this.LauncherRunGameGroupBox.Controls.Add(this.LauncherRunGameButton);
+			this.LauncherRunGameGroupBox.Location = new System.Drawing.Point(3, 181);
+			this.LauncherRunGameGroupBox.Name = "LauncherRunGameGroupBox";
+			this.LauncherRunGameGroupBox.Size = new System.Drawing.Size(145, 93);
+			this.LauncherRunGameGroupBox.TabIndex = 11;
+			this.LauncherRunGameGroupBox.TabStop = false;
+			this.LauncherRunGameGroupBox.Text = "Run";
 			// 
 			// LauncherRunGameMapNameTextBox
 			// 
-			LauncherRunGameMapNameTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherRunGameMapNameTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherRunGameMapNameTextBox.Location = new System.Drawing.Point(32, 19);
-			LauncherRunGameMapNameTextBox.Multiline = true;
-			LauncherRunGameMapNameTextBox.Name = "LauncherRunGameMapNameTextBox";
-			LauncherRunGameMapNameTextBox.ReadOnly = true;
-			LauncherRunGameMapNameTextBox.Size = new System.Drawing.Size(110, 19);
-			LauncherRunGameMapNameTextBox.TabIndex = 18;
+			this.LauncherRunGameMapNameTextBox.Location = new System.Drawing.Point(32, 19);
+			this.LauncherRunGameMapNameTextBox.Multiline = true;
+			this.LauncherRunGameMapNameTextBox.Name = "LauncherRunGameMapNameTextBox";
+			this.LauncherRunGameMapNameTextBox.ReadOnly = true;
+			this.LauncherRunGameMapNameTextBox.Size = new System.Drawing.Size(110, 19);
+			this.LauncherRunGameMapNameTextBox.TabIndex = 18;
 			// 
 			// LauncherRunGameLogfileBox
 			// 
-			LauncherRunGameLogfileBox.AutoSize = true;
-			LauncherRunGameLogfileBox.Location = new System.Drawing.Point(82, 44);
-			LauncherRunGameLogfileBox.Name = "LauncherRunGameLogfileBox";
-			LauncherRunGameLogfileBox.Size = new System.Drawing.Size(57, 17);
-			LauncherRunGameLogfileBox.TabIndex = 17;
-			LauncherRunGameLogfileBox.Text = "Logfile";
-			LauncherRunGameLogfileBox.UseVisualStyleBackColor = true;
+			this.LauncherRunGameLogfileBox.AutoSize = true;
+			this.LauncherRunGameLogfileBox.Location = new System.Drawing.Point(82, 44);
+			this.LauncherRunGameLogfileBox.Name = "LauncherRunGameLogfileBox";
+			this.LauncherRunGameLogfileBox.Size = new System.Drawing.Size(57, 17);
+			this.LauncherRunGameLogfileBox.TabIndex = 17;
+			this.LauncherRunGameLogfileBox.Text = "Logfile";
+			this.LauncherRunGameLogfileBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherRunGameDeveloperBox
 			// 
-			LauncherRunGameDeveloperBox.AutoSize = true;
-			LauncherRunGameDeveloperBox.Location = new System.Drawing.Point(6, 44);
-			LauncherRunGameDeveloperBox.Name = "LauncherRunGameDeveloperBox";
-			LauncherRunGameDeveloperBox.Size = new System.Drawing.Size(75, 17);
-			LauncherRunGameDeveloperBox.TabIndex = 16;
-			LauncherRunGameDeveloperBox.Text = "Developer";
-			LauncherRunGameDeveloperBox.UseVisualStyleBackColor = true;
+			this.LauncherRunGameDeveloperBox.AutoSize = true;
+			this.LauncherRunGameDeveloperBox.Location = new System.Drawing.Point(6, 44);
+			this.LauncherRunGameDeveloperBox.Name = "LauncherRunGameDeveloperBox";
+			this.LauncherRunGameDeveloperBox.Size = new System.Drawing.Size(75, 17);
+			this.LauncherRunGameDeveloperBox.TabIndex = 16;
+			this.LauncherRunGameDeveloperBox.Text = "Developer";
+			this.LauncherRunGameDeveloperBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherRunGameMapNameLabel
 			// 
-			LauncherRunGameMapNameLabel.AutoSize = true;
-			LauncherRunGameMapNameLabel.Location = new System.Drawing.Point(3, 25);
-			LauncherRunGameMapNameLabel.Name = "LauncherRunGameMapNameLabel";
-			LauncherRunGameMapNameLabel.Size = new System.Drawing.Size(28, 13);
-			LauncherRunGameMapNameLabel.TabIndex = 15;
-			LauncherRunGameMapNameLabel.Text = "Map";
+			this.LauncherRunGameMapNameLabel.AutoSize = true;
+			this.LauncherRunGameMapNameLabel.Location = new System.Drawing.Point(3, 25);
+			this.LauncherRunGameMapNameLabel.Name = "LauncherRunGameMapNameLabel";
+			this.LauncherRunGameMapNameLabel.Size = new System.Drawing.Size(28, 13);
+			this.LauncherRunGameMapNameLabel.TabIndex = 15;
+			this.LauncherRunGameMapNameLabel.Text = "Map";
 			// 
 			// LauncherRunGameButton
 			// 
-			LauncherRunGameButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherRunGameButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F);
-			LauncherRunGameButton.Location = new System.Drawing.Point(6, 63);
-			LauncherRunGameButton.Name = "LauncherRunGameButton";
-			LauncherRunGameButton.Size = new System.Drawing.Size(133, 24);
-			LauncherRunGameButton.TabIndex = 2;
-			LauncherRunGameButton.Text = "Run";
-			LauncherRunGameButton.UseVisualStyleBackColor = true;
-			LauncherRunGameButton.Click += new System.EventHandler(LauncherRunGameButton_Click);
+			this.LauncherRunGameButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherRunGameButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F);
+			this.LauncherRunGameButton.Location = new System.Drawing.Point(6, 63);
+			this.LauncherRunGameButton.Name = "LauncherRunGameButton";
+			this.LauncherRunGameButton.Size = new System.Drawing.Size(133, 24);
+			this.LauncherRunGameButton.TabIndex = 2;
+			this.LauncherRunGameButton.Text = "Run";
+			this.LauncherRunGameButton.UseVisualStyleBackColor = true;
+			this.LauncherRunGameButton.Click += new System.EventHandler(this.LauncherRunGameButton_Click);
 			// 
 			// LauncherRunGameCustomCommandLineMPGroupBox
 			// 
-			LauncherRunGameCustomCommandLineMPGroupBox.Controls.Add(LauncherRunGameCustomCommandLineMPCheckBox);
-			LauncherRunGameCustomCommandLineMPGroupBox.Controls.Add(LauncherRunGameCustomCommandLineMPTextBox);
-			LauncherRunGameCustomCommandLineMPGroupBox.Location = new System.Drawing.Point(3, 118);
-			LauncherRunGameCustomCommandLineMPGroupBox.Name = "LauncherRunGameCustomCommandLineMPGroupBox";
-			LauncherRunGameCustomCommandLineMPGroupBox.Size = new System.Drawing.Size(145, 63);
-			LauncherRunGameCustomCommandLineMPGroupBox.TabIndex = 5;
-			LauncherRunGameCustomCommandLineMPGroupBox.TabStop = false;
-			LauncherRunGameCustomCommandLineMPGroupBox.Text = "Multiplayer Options";
+			this.LauncherRunGameCustomCommandLineMPGroupBox.Controls.Add(this.LauncherRunGameCustomCommandLineMPCheckBox);
+			this.LauncherRunGameCustomCommandLineMPGroupBox.Controls.Add(this.LauncherRunGameCustomCommandLineMPTextBox);
+			this.LauncherRunGameCustomCommandLineMPGroupBox.Location = new System.Drawing.Point(3, 118);
+			this.LauncherRunGameCustomCommandLineMPGroupBox.Name = "LauncherRunGameCustomCommandLineMPGroupBox";
+			this.LauncherRunGameCustomCommandLineMPGroupBox.Size = new System.Drawing.Size(145, 63);
+			this.LauncherRunGameCustomCommandLineMPGroupBox.TabIndex = 5;
+			this.LauncherRunGameCustomCommandLineMPGroupBox.TabStop = false;
+			this.LauncherRunGameCustomCommandLineMPGroupBox.Text = "Multiplayer Options";
 			// 
 			// LauncherRunGameCustomCommandLineMPCheckBox
 			// 
-			LauncherRunGameCustomCommandLineMPCheckBox.AutoSize = true;
-			LauncherRunGameCustomCommandLineMPCheckBox.Location = new System.Drawing.Point(6, 14);
-			LauncherRunGameCustomCommandLineMPCheckBox.Name = "LauncherRunGameCustomCommandLineMPCheckBox";
-			LauncherRunGameCustomCommandLineMPCheckBox.Size = new System.Drawing.Size(65, 17);
-			LauncherRunGameCustomCommandLineMPCheckBox.TabIndex = 2;
-			LauncherRunGameCustomCommandLineMPCheckBox.Text = "Enabled";
-			LauncherRunGameCustomCommandLineMPCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherRunGameCustomCommandLineMPCheckBox.AutoSize = true;
+			this.LauncherRunGameCustomCommandLineMPCheckBox.Location = new System.Drawing.Point(6, 14);
+			this.LauncherRunGameCustomCommandLineMPCheckBox.Name = "LauncherRunGameCustomCommandLineMPCheckBox";
+			this.LauncherRunGameCustomCommandLineMPCheckBox.Size = new System.Drawing.Size(65, 17);
+			this.LauncherRunGameCustomCommandLineMPCheckBox.TabIndex = 2;
+			this.LauncherRunGameCustomCommandLineMPCheckBox.Text = "Enabled";
+			this.LauncherRunGameCustomCommandLineMPCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherRunGameCustomCommandLineMPTextBox
 			// 
-			LauncherRunGameCustomCommandLineMPTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherRunGameCustomCommandLineMPTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherRunGameCustomCommandLineMPTextBox.Location = new System.Drawing.Point(6, 37);
-			LauncherRunGameCustomCommandLineMPTextBox.Name = "LauncherRunGameCustomCommandLineMPTextBox";
-			LauncherRunGameCustomCommandLineMPTextBox.Size = new System.Drawing.Size(136, 20);
-			LauncherRunGameCustomCommandLineMPTextBox.TabIndex = 0;
+			this.LauncherRunGameCustomCommandLineMPTextBox.Location = new System.Drawing.Point(6, 37);
+			this.LauncherRunGameCustomCommandLineMPTextBox.Name = "LauncherRunGameCustomCommandLineMPTextBox";
+			this.LauncherRunGameCustomCommandLineMPTextBox.Size = new System.Drawing.Size(136, 20);
+			this.LauncherRunGameCustomCommandLineMPTextBox.TabIndex = 0;
 			// 
 			// LauncherRunGameModGroupBox
 			// 
-			LauncherRunGameModGroupBox.Controls.Add(LauncherRunGameModComboBox);
-			LauncherRunGameModGroupBox.Location = new System.Drawing.Point(3, 4);
-			LauncherRunGameModGroupBox.Name = "LauncherRunGameModGroupBox";
-			LauncherRunGameModGroupBox.Size = new System.Drawing.Size(145, 42);
-			LauncherRunGameModGroupBox.TabIndex = 1;
-			LauncherRunGameModGroupBox.TabStop = false;
-			LauncherRunGameModGroupBox.Text = "Mod";
+			this.LauncherRunGameModGroupBox.Controls.Add(this.LauncherRunGameModComboBox);
+			this.LauncherRunGameModGroupBox.Location = new System.Drawing.Point(3, 4);
+			this.LauncherRunGameModGroupBox.Name = "LauncherRunGameModGroupBox";
+			this.LauncherRunGameModGroupBox.Size = new System.Drawing.Size(145, 42);
+			this.LauncherRunGameModGroupBox.TabIndex = 1;
+			this.LauncherRunGameModGroupBox.TabStop = false;
+			this.LauncherRunGameModGroupBox.Text = "Mod";
 			// 
 			// LauncherRunGameModComboBox
 			// 
-			LauncherRunGameModComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherRunGameModComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherRunGameModComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			LauncherRunGameModComboBox.FormattingEnabled = true;
-			LauncherRunGameModComboBox.Location = new System.Drawing.Point(6, 18);
-			LauncherRunGameModComboBox.Name = "LauncherRunGameModComboBox";
-			LauncherRunGameModComboBox.Size = new System.Drawing.Size(136, 21);
-			LauncherRunGameModComboBox.TabIndex = 0;
+			this.LauncherRunGameModComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.LauncherRunGameModComboBox.FormattingEnabled = true;
+			this.LauncherRunGameModComboBox.Location = new System.Drawing.Point(6, 18);
+			this.LauncherRunGameModComboBox.Name = "LauncherRunGameModComboBox";
+			this.LauncherRunGameModComboBox.Size = new System.Drawing.Size(136, 21);
+			this.LauncherRunGameModComboBox.TabIndex = 0;
 			// 
 			// LauncherRunGameCommandLineTextBox
 			// 
-			LauncherRunGameCommandLineTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+			this.LauncherRunGameCommandLineTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherRunGameCommandLineTextBox.Location = new System.Drawing.Point(147, 357);
-			LauncherRunGameCommandLineTextBox.Name = "LauncherRunGameCommandLineTextBox";
-			LauncherRunGameCommandLineTextBox.ReadOnly = true;
-			LauncherRunGameCommandLineTextBox.Size = new System.Drawing.Size(648, 20);
-			LauncherRunGameCommandLineTextBox.TabIndex = 14;
+			this.LauncherRunGameCommandLineTextBox.Location = new System.Drawing.Point(147, 357);
+			this.LauncherRunGameCommandLineTextBox.Name = "LauncherRunGameCommandLineTextBox";
+			this.LauncherRunGameCommandLineTextBox.ReadOnly = true;
+			this.LauncherRunGameCommandLineTextBox.Size = new System.Drawing.Size(648, 20);
+			this.LauncherRunGameCommandLineTextBox.TabIndex = 14;
 			// 
 			// LauncherIconBlops
 			// 
-			LauncherIconBlops.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconBlops.BackgroundImage")));
-			LauncherIconBlops.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
-			LauncherIconBlops.Location = new System.Drawing.Point(5, 3);
-			LauncherIconBlops.Name = "LauncherIconBlops";
-			LauncherIconBlops.Size = new System.Drawing.Size(138, 108);
-			LauncherIconBlops.TabIndex = 9;
-			LauncherIconBlops.TabStop = false;
+			this.LauncherIconBlops.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconBlops.BackgroundImage")));
+			this.LauncherIconBlops.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+			this.LauncherIconBlops.Location = new System.Drawing.Point(5, 3);
+			this.LauncherIconBlops.Name = "LauncherIconBlops";
+			this.LauncherIconBlops.Size = new System.Drawing.Size(138, 108);
+			this.LauncherIconBlops.TabIndex = 9;
+			this.LauncherIconBlops.TabStop = false;
 			// 
 			// LauncherGameGroupBox
 			// 
-			LauncherGameGroupBox.Controls.Add(LauncherGameLogfileBox);
-			LauncherGameGroupBox.Controls.Add(LauncherGameDeveloperBox);
-			LauncherGameGroupBox.Controls.Add(LauncherIconMP);
-			LauncherGameGroupBox.Controls.Add(LauncherIconSP);
-			LauncherGameGroupBox.Controls.Add(LauncherButtonMP);
-			LauncherGameGroupBox.Controls.Add(LauncherButtonSP);
-			LauncherGameGroupBox.Location = new System.Drawing.Point(4, 115);
-			LauncherGameGroupBox.Name = "LauncherGameGroupBox";
-			LauncherGameGroupBox.Size = new System.Drawing.Size(139, 65);
-			LauncherGameGroupBox.TabIndex = 10;
-			LauncherGameGroupBox.TabStop = false;
-			LauncherGameGroupBox.Text = "Game";
+			this.LauncherGameGroupBox.Controls.Add(this.LauncherGameLogfileBox);
+			this.LauncherGameGroupBox.Controls.Add(this.LauncherGameDeveloperBox);
+			this.LauncherGameGroupBox.Controls.Add(this.LauncherIconMP);
+			this.LauncherGameGroupBox.Controls.Add(this.LauncherIconSP);
+			this.LauncherGameGroupBox.Controls.Add(this.LauncherButtonMP);
+			this.LauncherGameGroupBox.Controls.Add(this.LauncherButtonSP);
+			this.LauncherGameGroupBox.Location = new System.Drawing.Point(4, 115);
+			this.LauncherGameGroupBox.Name = "LauncherGameGroupBox";
+			this.LauncherGameGroupBox.Size = new System.Drawing.Size(139, 65);
+			this.LauncherGameGroupBox.TabIndex = 10;
+			this.LauncherGameGroupBox.TabStop = false;
+			this.LauncherGameGroupBox.Text = "Game";
 			// 
 			// LauncherGameLogfileBox
 			// 
-			LauncherGameLogfileBox.AutoSize = true;
-			LauncherGameLogfileBox.Location = new System.Drawing.Point(81, 16);
-			LauncherGameLogfileBox.Name = "LauncherGameLogfileBox";
-			LauncherGameLogfileBox.Size = new System.Drawing.Size(57, 17);
-			LauncherGameLogfileBox.TabIndex = 22;
-			LauncherGameLogfileBox.Text = "Logfile";
-			LauncherGameLogfileBox.UseVisualStyleBackColor = true;
+			this.LauncherGameLogfileBox.AutoSize = true;
+			this.LauncherGameLogfileBox.Location = new System.Drawing.Point(81, 16);
+			this.LauncherGameLogfileBox.Name = "LauncherGameLogfileBox";
+			this.LauncherGameLogfileBox.Size = new System.Drawing.Size(57, 17);
+			this.LauncherGameLogfileBox.TabIndex = 22;
+			this.LauncherGameLogfileBox.Text = "Logfile";
+			this.LauncherGameLogfileBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherGameDeveloperBox
 			// 
-			LauncherGameDeveloperBox.AutoSize = true;
-			LauncherGameDeveloperBox.Location = new System.Drawing.Point(5, 16);
-			LauncherGameDeveloperBox.Name = "LauncherGameDeveloperBox";
-			LauncherGameDeveloperBox.Size = new System.Drawing.Size(75, 17);
-			LauncherGameDeveloperBox.TabIndex = 21;
-			LauncherGameDeveloperBox.Text = "Developer";
-			LauncherGameDeveloperBox.UseVisualStyleBackColor = true;
+			this.LauncherGameDeveloperBox.AutoSize = true;
+			this.LauncherGameDeveloperBox.Location = new System.Drawing.Point(5, 16);
+			this.LauncherGameDeveloperBox.Name = "LauncherGameDeveloperBox";
+			this.LauncherGameDeveloperBox.Size = new System.Drawing.Size(75, 17);
+			this.LauncherGameDeveloperBox.TabIndex = 21;
+			this.LauncherGameDeveloperBox.Text = "Developer";
+			this.LauncherGameDeveloperBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherIconMP
 			// 
-			LauncherIconMP.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconMP.BackgroundImage")));
-			LauncherIconMP.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-			LauncherIconMP.Enabled = false;
-			LauncherIconMP.Location = new System.Drawing.Point(85, 39);
-			LauncherIconMP.Name = "LauncherIconMP";
-			LauncherIconMP.Size = new System.Drawing.Size(16, 16);
-			LauncherIconMP.TabIndex = 20;
-			LauncherIconMP.TabStop = false;
+			this.LauncherIconMP.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconMP.BackgroundImage")));
+			this.LauncherIconMP.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+			this.LauncherIconMP.Enabled = false;
+			this.LauncherIconMP.Location = new System.Drawing.Point(85, 39);
+			this.LauncherIconMP.Name = "LauncherIconMP";
+			this.LauncherIconMP.Size = new System.Drawing.Size(16, 16);
+			this.LauncherIconMP.TabIndex = 20;
+			this.LauncherIconMP.TabStop = false;
 			// 
 			// LauncherIconSP
 			// 
-			LauncherIconSP.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconSP.BackgroundImage")));
-			LauncherIconSP.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-			LauncherIconSP.Enabled = false;
-			LauncherIconSP.Location = new System.Drawing.Point(24, 39);
-			LauncherIconSP.Name = "LauncherIconSP";
-			LauncherIconSP.Size = new System.Drawing.Size(16, 16);
-			LauncherIconSP.TabIndex = 11;
-			LauncherIconSP.TabStop = false;
+			this.LauncherIconSP.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconSP.BackgroundImage")));
+			this.LauncherIconSP.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+			this.LauncherIconSP.Enabled = false;
+			this.LauncherIconSP.Location = new System.Drawing.Point(24, 39);
+			this.LauncherIconSP.Name = "LauncherIconSP";
+			this.LauncherIconSP.Size = new System.Drawing.Size(16, 16);
+			this.LauncherIconSP.TabIndex = 11;
+			this.LauncherIconSP.TabStop = false;
 			// 
 			// LauncherButtonMP
 			// 
-			LauncherButtonMP.Location = new System.Drawing.Point(71, 35);
-			LauncherButtonMP.Name = "LauncherButtonMP";
-			LauncherButtonMP.Size = new System.Drawing.Size(64, 24);
-			LauncherButtonMP.TabIndex = 1;
-			LauncherButtonMP.Text = "     MP";
-			LauncherButtonMP.UseVisualStyleBackColor = true;
-			LauncherButtonMP.Click += new System.EventHandler(LauncherButtonMP_Click);
+			this.LauncherButtonMP.Location = new System.Drawing.Point(71, 35);
+			this.LauncherButtonMP.Name = "LauncherButtonMP";
+			this.LauncherButtonMP.Size = new System.Drawing.Size(64, 24);
+			this.LauncherButtonMP.TabIndex = 1;
+			this.LauncherButtonMP.Text = "     MP";
+			this.LauncherButtonMP.UseVisualStyleBackColor = true;
+			this.LauncherButtonMP.Click += new System.EventHandler(this.LauncherButtonMP_Click);
 			// 
 			// LauncherButtonSP
 			// 
-			LauncherButtonSP.Location = new System.Drawing.Point(8, 35);
-			LauncherButtonSP.Name = "LauncherButtonSP";
-			LauncherButtonSP.Size = new System.Drawing.Size(64, 24);
-			LauncherButtonSP.TabIndex = 0;
-			LauncherButtonSP.Text = "     SP";
-			LauncherButtonSP.UseVisualStyleBackColor = true;
-			LauncherButtonSP.Click += new System.EventHandler(LauncherButtonSP_Click);
+			this.LauncherButtonSP.Location = new System.Drawing.Point(8, 35);
+			this.LauncherButtonSP.Name = "LauncherButtonSP";
+			this.LauncherButtonSP.Size = new System.Drawing.Size(64, 24);
+			this.LauncherButtonSP.TabIndex = 0;
+			this.LauncherButtonSP.Text = "     SP";
+			this.LauncherButtonSP.UseVisualStyleBackColor = true;
+			this.LauncherButtonSP.Click += new System.EventHandler(this.LauncherButtonSP_Click);
 			// 
 			// LauncherTab
 			// 
-			LauncherTab.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherTab.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherTab.Controls.Add(LauncherTabModBuilder);
-			LauncherTab.Controls.Add(LauncherTabCompileLevel);
-			LauncherTab.Controls.Add(LauncherTabExplore);
-			LauncherTab.Location = new System.Drawing.Point(149, 1);
-			LauncherTab.Name = "LauncherTab";
-			LauncherTab.SelectedIndex = 0;
-			LauncherTab.Size = new System.Drawing.Size(649, 350);
-			LauncherTab.TabIndex = 0;
+			this.LauncherTab.Controls.Add(this.LauncherTabModBuilder);
+			this.LauncherTab.Controls.Add(this.LauncherTabCompileLevel);
+			this.LauncherTab.Controls.Add(this.LauncherTabExplore);
+			this.LauncherTab.Location = new System.Drawing.Point(149, 1);
+			this.LauncherTab.Name = "LauncherTab";
+			this.LauncherTab.SelectedIndex = 0;
+			this.LauncherTab.Size = new System.Drawing.Size(649, 350);
+			this.LauncherTab.TabIndex = 0;
 			// 
 			// LauncherTabModBuilder
 			// 
-			LauncherTabModBuilder.Controls.Add(LauncherIwdFileGroupBox);
-			LauncherTabModBuilder.Controls.Add(LauncherModGroupBox);
-			LauncherTabModBuilder.Location = new System.Drawing.Point(4, 22);
-			LauncherTabModBuilder.Name = "LauncherTabModBuilder";
-			LauncherTabModBuilder.Padding = new System.Windows.Forms.Padding(3);
-			LauncherTabModBuilder.Size = new System.Drawing.Size(641, 324);
-			LauncherTabModBuilder.TabIndex = 1;
-			LauncherTabModBuilder.Text = "Mod Builder";
-			LauncherTabModBuilder.UseVisualStyleBackColor = true;
+			this.LauncherTabModBuilder.Controls.Add(this.LauncherIwdFileGroupBox);
+			this.LauncherTabModBuilder.Controls.Add(this.LauncherModGroupBox);
+			this.LauncherTabModBuilder.Location = new System.Drawing.Point(4, 22);
+			this.LauncherTabModBuilder.Name = "LauncherTabModBuilder";
+			this.LauncherTabModBuilder.Padding = new System.Windows.Forms.Padding(3);
+			this.LauncherTabModBuilder.Size = new System.Drawing.Size(641, 324);
+			this.LauncherTabModBuilder.TabIndex = 1;
+			this.LauncherTabModBuilder.Text = "Mod Builder";
+			this.LauncherTabModBuilder.UseVisualStyleBackColor = true;
 			// 
 			// LauncherIwdFileGroupBox
 			// 
-			LauncherIwdFileGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherIwdFileGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherIwdFileGroupBox.Controls.Add(LauncherIwdFileTree);
-			LauncherIwdFileGroupBox.Location = new System.Drawing.Point(298, 6);
-			LauncherIwdFileGroupBox.Name = "LauncherIwdFileGroupBox";
-			LauncherIwdFileGroupBox.Size = new System.Drawing.Size(340, 312);
-			LauncherIwdFileGroupBox.TabIndex = 2;
-			LauncherIwdFileGroupBox.TabStop = false;
-			LauncherIwdFileGroupBox.Text = "IWD File List";
+			this.LauncherIwdFileGroupBox.Controls.Add(this.LauncherIwdFileTree);
+			this.LauncherIwdFileGroupBox.Location = new System.Drawing.Point(298, 6);
+			this.LauncherIwdFileGroupBox.Name = "LauncherIwdFileGroupBox";
+			this.LauncherIwdFileGroupBox.Size = new System.Drawing.Size(340, 312);
+			this.LauncherIwdFileGroupBox.TabIndex = 2;
+			this.LauncherIwdFileGroupBox.TabStop = false;
+			this.LauncherIwdFileGroupBox.Text = "IWD File List";
 			// 
 			// LauncherIwdFileTree
 			// 
-			LauncherIwdFileTree.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherIwdFileTree.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherIwdFileTree.CheckBoxes = true;
-			LauncherIwdFileTree.Indent = 15;
-			LauncherIwdFileTree.Location = new System.Drawing.Point(6, 19);
-			LauncherIwdFileTree.Name = "LauncherIwdFileTree";
-			LauncherIwdFileTree.Size = new System.Drawing.Size(328, 287);
-			LauncherIwdFileTree.TabIndex = 1;
-			LauncherIwdFileTree.AfterCheck += new System.Windows.Forms.TreeViewEventHandler(LauncherIwdFileTree_AfterCheck);
-			LauncherIwdFileTree.DoubleClick += new System.EventHandler(LauncherIwdFileTree_DoubleClick);
+			this.LauncherIwdFileTree.CheckBoxes = true;
+			this.LauncherIwdFileTree.Indent = 15;
+			this.LauncherIwdFileTree.Location = new System.Drawing.Point(6, 19);
+			this.LauncherIwdFileTree.Name = "LauncherIwdFileTree";
+			this.LauncherIwdFileTree.Size = new System.Drawing.Size(328, 287);
+			this.LauncherIwdFileTree.TabIndex = 1;
+			this.LauncherIwdFileTree.AfterCheck += new System.Windows.Forms.TreeViewEventHandler(this.LauncherIwdFileTree_AfterCheck);
+			this.LauncherIwdFileTree.DoubleClick += new System.EventHandler(this.LauncherIwdFileTree_DoubleClick);
 			// 
 			// LauncherModGroupBox
 			// 
-			LauncherModGroupBox.Controls.Add(LauncherModFolderGroupBox);
-			LauncherModGroupBox.Controls.Add(LauncherModBuildGroupBox);
-			LauncherModGroupBox.Controls.Add(LauncherModZoneSourceGroupBox);
-			LauncherModGroupBox.Controls.Add(LauncherModComboBox);
-			LauncherModGroupBox.Location = new System.Drawing.Point(6, 6);
-			LauncherModGroupBox.Name = "LauncherModGroupBox";
-			LauncherModGroupBox.Size = new System.Drawing.Size(286, 312);
-			LauncherModGroupBox.TabIndex = 4;
-			LauncherModGroupBox.TabStop = false;
-			LauncherModGroupBox.Text = "Mod";
+			this.LauncherModGroupBox.Controls.Add(this.LauncherModFolderGroupBox);
+			this.LauncherModGroupBox.Controls.Add(this.LauncherModBuildGroupBox);
+			this.LauncherModGroupBox.Controls.Add(this.LauncherModZoneSourceGroupBox);
+			this.LauncherModGroupBox.Controls.Add(this.LauncherModComboBox);
+			this.LauncherModGroupBox.Location = new System.Drawing.Point(6, 6);
+			this.LauncherModGroupBox.Name = "LauncherModGroupBox";
+			this.LauncherModGroupBox.Size = new System.Drawing.Size(286, 312);
+			this.LauncherModGroupBox.TabIndex = 4;
+			this.LauncherModGroupBox.TabStop = false;
+			this.LauncherModGroupBox.Text = "Mod";
 			// 
 			// LauncherModFolderGroupBox
 			// 
-			LauncherModFolderGroupBox.Controls.Add(LauncherModFolderViewButton);
-			LauncherModFolderGroupBox.Location = new System.Drawing.Point(7, 262);
-			LauncherModFolderGroupBox.Name = "LauncherModFolderGroupBox";
-			LauncherModFolderGroupBox.Size = new System.Drawing.Size(273, 44);
-			LauncherModFolderGroupBox.TabIndex = 24;
-			LauncherModFolderGroupBox.TabStop = false;
-			LauncherModFolderGroupBox.Text = "Mod Folder";
+			this.LauncherModFolderGroupBox.Controls.Add(this.LauncherModFolderViewButton);
+			this.LauncherModFolderGroupBox.Location = new System.Drawing.Point(7, 262);
+			this.LauncherModFolderGroupBox.Name = "LauncherModFolderGroupBox";
+			this.LauncherModFolderGroupBox.Size = new System.Drawing.Size(273, 44);
+			this.LauncherModFolderGroupBox.TabIndex = 24;
+			this.LauncherModFolderGroupBox.TabStop = false;
+			this.LauncherModFolderGroupBox.Text = "Mod Folder";
 			// 
 			// LauncherModFolderViewButton
 			// 
-			LauncherModFolderViewButton.Location = new System.Drawing.Point(6, 16);
-			LauncherModFolderViewButton.Name = "LauncherModFolderViewButton";
-			LauncherModFolderViewButton.Size = new System.Drawing.Size(262, 24);
-			LauncherModFolderViewButton.TabIndex = 0;
-			LauncherModFolderViewButton.Text = "View Mod";
-			LauncherModFolderViewButton.UseVisualStyleBackColor = true;
-			LauncherModFolderViewButton.Click += new System.EventHandler(LauncherModFolderViewButton_Click);
+			this.LauncherModFolderViewButton.Location = new System.Drawing.Point(6, 16);
+			this.LauncherModFolderViewButton.Name = "LauncherModFolderViewButton";
+			this.LauncherModFolderViewButton.Size = new System.Drawing.Size(262, 24);
+			this.LauncherModFolderViewButton.TabIndex = 0;
+			this.LauncherModFolderViewButton.Text = "View Mod";
+			this.LauncherModFolderViewButton.UseVisualStyleBackColor = true;
+			this.LauncherModFolderViewButton.Click += new System.EventHandler(this.LauncherModFolderViewButton_Click);
 			// 
 			// LauncherModBuildGroupBox
 			// 
-			LauncherModBuildGroupBox.Controls.Add(LauncherModBuildLinkerOptionsTextBox);
-			LauncherModBuildGroupBox.Controls.Add(LauncherModBuildLinkerOptionsLabel);
-			LauncherModBuildGroupBox.Controls.Add(LauncherModVerboseCheckBox);
-			LauncherModBuildGroupBox.Controls.Add(LauncherModBuildFastFilesCheckBox);
-			LauncherModBuildGroupBox.Controls.Add(LauncherModBuildIwdFileCheckBox);
-			LauncherModBuildGroupBox.Controls.Add(LauncherModBuildButton);
-			LauncherModBuildGroupBox.Controls.Add(LauncherModBuildSoundsCheckBox);
-			LauncherModBuildGroupBox.Location = new System.Drawing.Point(7, 136);
-			LauncherModBuildGroupBox.Name = "LauncherModBuildGroupBox";
-			LauncherModBuildGroupBox.Size = new System.Drawing.Size(273, 120);
-			LauncherModBuildGroupBox.TabIndex = 23;
-			LauncherModBuildGroupBox.TabStop = false;
-			LauncherModBuildGroupBox.Text = "Build Mod";
+			this.LauncherModBuildGroupBox.Controls.Add(this.LauncherModBuildLinkerOptionsTextBox);
+			this.LauncherModBuildGroupBox.Controls.Add(this.LauncherModBuildLinkerOptionsLabel);
+			this.LauncherModBuildGroupBox.Controls.Add(this.LauncherModVerboseCheckBox);
+			this.LauncherModBuildGroupBox.Controls.Add(this.LauncherModBuildFastFilesCheckBox);
+			this.LauncherModBuildGroupBox.Controls.Add(this.LauncherModBuildIwdFileCheckBox);
+			this.LauncherModBuildGroupBox.Controls.Add(this.LauncherModBuildButton);
+			this.LauncherModBuildGroupBox.Controls.Add(this.LauncherModBuildSoundsCheckBox);
+			this.LauncherModBuildGroupBox.Location = new System.Drawing.Point(7, 136);
+			this.LauncherModBuildGroupBox.Name = "LauncherModBuildGroupBox";
+			this.LauncherModBuildGroupBox.Size = new System.Drawing.Size(273, 120);
+			this.LauncherModBuildGroupBox.TabIndex = 23;
+			this.LauncherModBuildGroupBox.TabStop = false;
+			this.LauncherModBuildGroupBox.Text = "Build Mod";
 			// 
 			// LauncherModBuildLinkerOptionsTextBox
 			// 
-			LauncherModBuildLinkerOptionsTextBox.Location = new System.Drawing.Point(128, 61);
-			LauncherModBuildLinkerOptionsTextBox.Name = "LauncherModBuildLinkerOptionsTextBox";
-			LauncherModBuildLinkerOptionsTextBox.Size = new System.Drawing.Size(137, 20);
-			LauncherModBuildLinkerOptionsTextBox.TabIndex = 24;
+			this.LauncherModBuildLinkerOptionsTextBox.Location = new System.Drawing.Point(128, 61);
+			this.LauncherModBuildLinkerOptionsTextBox.Name = "LauncherModBuildLinkerOptionsTextBox";
+			this.LauncherModBuildLinkerOptionsTextBox.Size = new System.Drawing.Size(137, 20);
+			this.LauncherModBuildLinkerOptionsTextBox.TabIndex = 24;
 			// 
 			// LauncherModBuildLinkerOptionsLabel
 			// 
-			LauncherModBuildLinkerOptionsLabel.AutoSize = true;
-			LauncherModBuildLinkerOptionsLabel.Location = new System.Drawing.Point(6, 64);
-			LauncherModBuildLinkerOptionsLabel.Name = "LauncherModBuildLinkerOptionsLabel";
-			LauncherModBuildLinkerOptionsLabel.Size = new System.Drawing.Size(116, 13);
-			LauncherModBuildLinkerOptionsLabel.TabIndex = 23;
-			LauncherModBuildLinkerOptionsLabel.Text = "Custom Linker Options:";
+			this.LauncherModBuildLinkerOptionsLabel.AutoSize = true;
+			this.LauncherModBuildLinkerOptionsLabel.Location = new System.Drawing.Point(6, 64);
+			this.LauncherModBuildLinkerOptionsLabel.Name = "LauncherModBuildLinkerOptionsLabel";
+			this.LauncherModBuildLinkerOptionsLabel.Size = new System.Drawing.Size(116, 13);
+			this.LauncherModBuildLinkerOptionsLabel.TabIndex = 23;
+			this.LauncherModBuildLinkerOptionsLabel.Text = "Custom Linker Options:";
 			// 
 			// LauncherModVerboseCheckBox
 			// 
-			LauncherModVerboseCheckBox.AutoSize = true;
-			LauncherModVerboseCheckBox.Location = new System.Drawing.Point(6, 42);
-			LauncherModVerboseCheckBox.Name = "LauncherModVerboseCheckBox";
-			LauncherModVerboseCheckBox.Size = new System.Drawing.Size(195, 17);
-			LauncherModVerboseCheckBox.TabIndex = 22;
-			LauncherModVerboseCheckBox.Text = "Verbose (More Detailed Information)";
-			LauncherModVerboseCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherModVerboseCheckBox.AutoSize = true;
+			this.LauncherModVerboseCheckBox.Location = new System.Drawing.Point(6, 42);
+			this.LauncherModVerboseCheckBox.Name = "LauncherModVerboseCheckBox";
+			this.LauncherModVerboseCheckBox.Size = new System.Drawing.Size(195, 17);
+			this.LauncherModVerboseCheckBox.TabIndex = 22;
+			this.LauncherModVerboseCheckBox.Text = "Verbose (More Detailed Information)";
+			this.LauncherModVerboseCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherModBuildFastFilesCheckBox
 			// 
-			LauncherModBuildFastFilesCheckBox.AutoSize = true;
-			LauncherModBuildFastFilesCheckBox.Location = new System.Drawing.Point(6, 19);
-			LauncherModBuildFastFilesCheckBox.Name = "LauncherModBuildFastFilesCheckBox";
-			LauncherModBuildFastFilesCheckBox.Size = new System.Drawing.Size(85, 17);
-			LauncherModBuildFastFilesCheckBox.TabIndex = 21;
-			LauncherModBuildFastFilesCheckBox.Text = "Link FastFile";
-			LauncherModBuildFastFilesCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherModBuildFastFilesCheckBox.AutoSize = true;
+			this.LauncherModBuildFastFilesCheckBox.Location = new System.Drawing.Point(6, 19);
+			this.LauncherModBuildFastFilesCheckBox.Name = "LauncherModBuildFastFilesCheckBox";
+			this.LauncherModBuildFastFilesCheckBox.Size = new System.Drawing.Size(85, 17);
+			this.LauncherModBuildFastFilesCheckBox.TabIndex = 21;
+			this.LauncherModBuildFastFilesCheckBox.Text = "Link FastFile";
+			this.LauncherModBuildFastFilesCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherModBuildIwdFileCheckBox
 			// 
-			LauncherModBuildIwdFileCheckBox.AutoSize = true;
-			LauncherModBuildIwdFileCheckBox.Location = new System.Drawing.Point(97, 19);
-			LauncherModBuildIwdFileCheckBox.Name = "LauncherModBuildIwdFileCheckBox";
-			LauncherModBuildIwdFileCheckBox.Size = new System.Drawing.Size(74, 17);
-			LauncherModBuildIwdFileCheckBox.TabIndex = 20;
-			LauncherModBuildIwdFileCheckBox.Text = "Build IWD";
-			LauncherModBuildIwdFileCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherModBuildIwdFileCheckBox.AutoSize = true;
+			this.LauncherModBuildIwdFileCheckBox.Location = new System.Drawing.Point(97, 19);
+			this.LauncherModBuildIwdFileCheckBox.Name = "LauncherModBuildIwdFileCheckBox";
+			this.LauncherModBuildIwdFileCheckBox.Size = new System.Drawing.Size(74, 17);
+			this.LauncherModBuildIwdFileCheckBox.TabIndex = 20;
+			this.LauncherModBuildIwdFileCheckBox.Text = "Build IWD";
+			this.LauncherModBuildIwdFileCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherModBuildButton
 			// 
-			LauncherModBuildButton.Location = new System.Drawing.Point(6, 88);
-			LauncherModBuildButton.Name = "LauncherModBuildButton";
-			LauncherModBuildButton.Size = new System.Drawing.Size(262, 24);
-			LauncherModBuildButton.TabIndex = 19;
-			LauncherModBuildButton.Text = "Build Mod";
-			LauncherModBuildButton.UseVisualStyleBackColor = true;
-			LauncherModBuildButton.Click += new System.EventHandler(LauncherModBuildButton_Click);
+			this.LauncherModBuildButton.Location = new System.Drawing.Point(6, 88);
+			this.LauncherModBuildButton.Name = "LauncherModBuildButton";
+			this.LauncherModBuildButton.Size = new System.Drawing.Size(262, 24);
+			this.LauncherModBuildButton.TabIndex = 19;
+			this.LauncherModBuildButton.Text = "Build Mod";
+			this.LauncherModBuildButton.UseVisualStyleBackColor = true;
+			this.LauncherModBuildButton.Click += new System.EventHandler(this.LauncherModBuildButton_Click);
 			// 
 			// LauncherModBuildSoundsCheckBox
 			// 
-			LauncherModBuildSoundsCheckBox.AutoSize = true;
-			LauncherModBuildSoundsCheckBox.Enabled = false;
-			LauncherModBuildSoundsCheckBox.Location = new System.Drawing.Point(177, 19);
-			LauncherModBuildSoundsCheckBox.Name = "LauncherModBuildSoundsCheckBox";
-			LauncherModBuildSoundsCheckBox.Size = new System.Drawing.Size(88, 17);
-			LauncherModBuildSoundsCheckBox.TabIndex = 18;
-			LauncherModBuildSoundsCheckBox.Text = "Build Sounds";
-			LauncherModBuildSoundsCheckBox.UseVisualStyleBackColor = true;
-			LauncherModBuildSoundsCheckBox.Visible = false;
+			this.LauncherModBuildSoundsCheckBox.AutoSize = true;
+			this.LauncherModBuildSoundsCheckBox.Enabled = false;
+			this.LauncherModBuildSoundsCheckBox.Location = new System.Drawing.Point(177, 19);
+			this.LauncherModBuildSoundsCheckBox.Name = "LauncherModBuildSoundsCheckBox";
+			this.LauncherModBuildSoundsCheckBox.Size = new System.Drawing.Size(88, 17);
+			this.LauncherModBuildSoundsCheckBox.TabIndex = 18;
+			this.LauncherModBuildSoundsCheckBox.Text = "Build Sounds";
+			this.LauncherModBuildSoundsCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherModBuildSoundsCheckBox.Visible = false;
 			// 
 			// LauncherModZoneSourceGroupBox
 			// 
-			LauncherModZoneSourceGroupBox.Controls.Add(LauncherModZoneSourceCSVButton);
-			LauncherModZoneSourceGroupBox.Controls.Add(LauncherModZoneSourceMissingAssetsButton);
-			LauncherModZoneSourceGroupBox.Controls.Add(LauncherEditZoneSourceButton);
-			LauncherModZoneSourceGroupBox.Location = new System.Drawing.Point(6, 47);
-			LauncherModZoneSourceGroupBox.Name = "LauncherModZoneSourceGroupBox";
-			LauncherModZoneSourceGroupBox.Size = new System.Drawing.Size(274, 83);
-			LauncherModZoneSourceGroupBox.TabIndex = 22;
-			LauncherModZoneSourceGroupBox.TabStop = false;
-			LauncherModZoneSourceGroupBox.Text = "FastFile Zone Source";
+			this.LauncherModZoneSourceGroupBox.Controls.Add(this.LauncherModZoneSourceCSVButton);
+			this.LauncherModZoneSourceGroupBox.Controls.Add(this.LauncherModZoneSourceMissingAssetsButton);
+			this.LauncherModZoneSourceGroupBox.Controls.Add(this.LauncherEditZoneSourceButton);
+			this.LauncherModZoneSourceGroupBox.Location = new System.Drawing.Point(6, 47);
+			this.LauncherModZoneSourceGroupBox.Name = "LauncherModZoneSourceGroupBox";
+			this.LauncherModZoneSourceGroupBox.Size = new System.Drawing.Size(274, 83);
+			this.LauncherModZoneSourceGroupBox.TabIndex = 22;
+			this.LauncherModZoneSourceGroupBox.TabStop = false;
+			this.LauncherModZoneSourceGroupBox.Text = "FastFile Zone Source";
 			// 
 			// LauncherModZoneSourceCSVButton
 			// 
-			LauncherModZoneSourceCSVButton.Location = new System.Drawing.Point(138, 50);
-			LauncherModZoneSourceCSVButton.Name = "LauncherModZoneSourceCSVButton";
-			LauncherModZoneSourceCSVButton.Size = new System.Drawing.Size(130, 23);
-			LauncherModZoneSourceCSVButton.TabIndex = 24;
-			LauncherModZoneSourceCSVButton.Text = "Zone Source";
-			LauncherModZoneSourceCSVButton.UseVisualStyleBackColor = true;
-			LauncherModZoneSourceCSVButton.Click += new System.EventHandler(LauncherModZoneSourceCSVButton_Click);
+			this.LauncherModZoneSourceCSVButton.Location = new System.Drawing.Point(138, 50);
+			this.LauncherModZoneSourceCSVButton.Name = "LauncherModZoneSourceCSVButton";
+			this.LauncherModZoneSourceCSVButton.Size = new System.Drawing.Size(130, 23);
+			this.LauncherModZoneSourceCSVButton.TabIndex = 24;
+			this.LauncherModZoneSourceCSVButton.Text = "Zone Source";
+			this.LauncherModZoneSourceCSVButton.UseVisualStyleBackColor = true;
+			this.LauncherModZoneSourceCSVButton.Click += new System.EventHandler(this.LauncherModZoneSourceCSVButton_Click);
 			// 
 			// LauncherModZoneSourceMissingAssetsButton
 			// 
-			LauncherModZoneSourceMissingAssetsButton.Location = new System.Drawing.Point(6, 50);
-			LauncherModZoneSourceMissingAssetsButton.Name = "LauncherModZoneSourceMissingAssetsButton";
-			LauncherModZoneSourceMissingAssetsButton.Size = new System.Drawing.Size(130, 23);
-			LauncherModZoneSourceMissingAssetsButton.TabIndex = 23;
-			LauncherModZoneSourceMissingAssetsButton.Text = "Missing Assets";
-			LauncherModZoneSourceMissingAssetsButton.UseVisualStyleBackColor = true;
-			LauncherModZoneSourceMissingAssetsButton.Click += new System.EventHandler(LauncherModZoneSourceMissingAssetsButton_Click);
+			this.LauncherModZoneSourceMissingAssetsButton.Location = new System.Drawing.Point(6, 50);
+			this.LauncherModZoneSourceMissingAssetsButton.Name = "LauncherModZoneSourceMissingAssetsButton";
+			this.LauncherModZoneSourceMissingAssetsButton.Size = new System.Drawing.Size(130, 23);
+			this.LauncherModZoneSourceMissingAssetsButton.TabIndex = 23;
+			this.LauncherModZoneSourceMissingAssetsButton.Text = "Missing Assets";
+			this.LauncherModZoneSourceMissingAssetsButton.UseVisualStyleBackColor = true;
+			this.LauncherModZoneSourceMissingAssetsButton.Click += new System.EventHandler(this.LauncherModZoneSourceMissingAssetsButton_Click);
 			// 
 			// LauncherEditZoneSourceButton
 			// 
-			LauncherEditZoneSourceButton.Location = new System.Drawing.Point(6, 19);
-			LauncherEditZoneSourceButton.Name = "LauncherEditZoneSourceButton";
-			LauncherEditZoneSourceButton.Size = new System.Drawing.Size(262, 24);
-			LauncherEditZoneSourceButton.TabIndex = 22;
-			LauncherEditZoneSourceButton.Text = "Edit Zone Source";
-			LauncherEditZoneSourceButton.UseVisualStyleBackColor = true;
-			LauncherEditZoneSourceButton.Click += new System.EventHandler(LauncherEditZoneSourceButton_Click);
+			this.LauncherEditZoneSourceButton.Location = new System.Drawing.Point(6, 19);
+			this.LauncherEditZoneSourceButton.Name = "LauncherEditZoneSourceButton";
+			this.LauncherEditZoneSourceButton.Size = new System.Drawing.Size(262, 24);
+			this.LauncherEditZoneSourceButton.TabIndex = 22;
+			this.LauncherEditZoneSourceButton.Text = "Edit Zone Source";
+			this.LauncherEditZoneSourceButton.UseVisualStyleBackColor = true;
+			this.LauncherEditZoneSourceButton.Click += new System.EventHandler(this.LauncherEditZoneSourceButton_Click);
 			// 
 			// LauncherModComboBox
 			// 
-			LauncherModComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			LauncherModComboBox.FormattingEnabled = true;
-			LauncherModComboBox.Location = new System.Drawing.Point(6, 20);
-			LauncherModComboBox.Name = "LauncherModComboBox";
-			LauncherModComboBox.Size = new System.Drawing.Size(274, 21);
-			LauncherModComboBox.TabIndex = 3;
-			LauncherModComboBox.SelectedIndexChanged += new System.EventHandler(LauncherModComboBox_SelectedIndexChanged);
+			this.LauncherModComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.LauncherModComboBox.FormattingEnabled = true;
+			this.LauncherModComboBox.Location = new System.Drawing.Point(6, 20);
+			this.LauncherModComboBox.Name = "LauncherModComboBox";
+			this.LauncherModComboBox.Size = new System.Drawing.Size(274, 21);
+			this.LauncherModComboBox.TabIndex = 3;
+			this.LauncherModComboBox.SelectedIndexChanged += new System.EventHandler(this.LauncherModComboBox_SelectedIndexChanged);
 			// 
 			// LauncherTabCompileLevel
 			// 
-			LauncherTabCompileLevel.Controls.Add(LauncherMapType);
-			LauncherTabCompileLevel.Controls.Add(LauncherMapTypeList);
-			LauncherTabCompileLevel.Controls.Add(LauncherCreateMapButton);
-			LauncherTabCompileLevel.Controls.Add(LauncherDeleteMapButton);
-			LauncherTabCompileLevel.Controls.Add(LauncherCompileLevelOptionsGroupBox);
-			LauncherTabCompileLevel.Controls.Add(LauncherMapList);
-			LauncherTabCompileLevel.Location = new System.Drawing.Point(4, 22);
-			LauncherTabCompileLevel.Name = "LauncherTabCompileLevel";
-			LauncherTabCompileLevel.Padding = new System.Windows.Forms.Padding(3);
-			LauncherTabCompileLevel.Size = new System.Drawing.Size(641, 324);
-			LauncherTabCompileLevel.TabIndex = 0;
-			LauncherTabCompileLevel.Text = "Level";
-			LauncherTabCompileLevel.UseVisualStyleBackColor = true;
+			this.LauncherTabCompileLevel.Controls.Add(this.LauncherMapType);
+			this.LauncherTabCompileLevel.Controls.Add(this.LauncherMapTypeList);
+			this.LauncherTabCompileLevel.Controls.Add(this.LauncherCreateMapButton);
+			this.LauncherTabCompileLevel.Controls.Add(this.LauncherDeleteMapButton);
+			this.LauncherTabCompileLevel.Controls.Add(this.LauncherCompileLevelOptionsGroupBox);
+			this.LauncherTabCompileLevel.Controls.Add(this.LauncherMapList);
+			this.LauncherTabCompileLevel.Location = new System.Drawing.Point(4, 22);
+			this.LauncherTabCompileLevel.Name = "LauncherTabCompileLevel";
+			this.LauncherTabCompileLevel.Padding = new System.Windows.Forms.Padding(3);
+			this.LauncherTabCompileLevel.Size = new System.Drawing.Size(641, 324);
+			this.LauncherTabCompileLevel.TabIndex = 0;
+			this.LauncherTabCompileLevel.Text = "Level";
+			this.LauncherTabCompileLevel.UseVisualStyleBackColor = true;
 			// 
 			// LauncherMapType
 			// 
-			LauncherMapType.AutoSize = true;
-			LauncherMapType.Location = new System.Drawing.Point(6, 9);
-			LauncherMapType.Name = "LauncherMapType";
-			LauncherMapType.Size = new System.Drawing.Size(34, 13);
-			LauncherMapType.TabIndex = 6;
-			LauncherMapType.Text = "Type:";
+			this.LauncherMapType.AutoSize = true;
+			this.LauncherMapType.Location = new System.Drawing.Point(6, 9);
+			this.LauncherMapType.Name = "LauncherMapType";
+			this.LauncherMapType.Size = new System.Drawing.Size(34, 13);
+			this.LauncherMapType.TabIndex = 6;
+			this.LauncherMapType.Text = "Type:";
 			// 
 			// LauncherMapTypeList
 			// 
-			LauncherMapTypeList.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			LauncherMapTypeList.FormattingEnabled = true;
-			LauncherMapTypeList.Items.AddRange(new object[] {
+			this.LauncherMapTypeList.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.LauncherMapTypeList.FormattingEnabled = true;
+			this.LauncherMapTypeList.Items.AddRange(new object[] {
             "Singleplayer",
             "Multiplayer"});
-			LauncherMapTypeList.Location = new System.Drawing.Point(46, 4);
-			LauncherMapTypeList.Name = "LauncherMapTypeList";
-			LauncherMapTypeList.Size = new System.Drawing.Size(110, 21);
-			LauncherMapTypeList.TabIndex = 5;
-			LauncherMapTypeList.SelectedIndexChanged += new System.EventHandler(LauncherMapTypeList_SelectedIndexChanged);
+			this.LauncherMapTypeList.Location = new System.Drawing.Point(46, 4);
+			this.LauncherMapTypeList.Name = "LauncherMapTypeList";
+			this.LauncherMapTypeList.Size = new System.Drawing.Size(110, 21);
+			this.LauncherMapTypeList.TabIndex = 5;
+			this.LauncherMapTypeList.SelectedIndexChanged += new System.EventHandler(this.LauncherMapTypeList_SelectedIndexChanged);
 			// 
 			// LauncherCreateMapButton
 			// 
-			LauncherCreateMapButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-			LauncherCreateMapButton.Location = new System.Drawing.Point(82, 294);
-			LauncherCreateMapButton.Name = "LauncherCreateMapButton";
-			LauncherCreateMapButton.Size = new System.Drawing.Size(74, 24);
-			LauncherCreateMapButton.TabIndex = 4;
-			LauncherCreateMapButton.Text = "Create Map";
-			LauncherCreateMapButton.UseVisualStyleBackColor = true;
-			LauncherCreateMapButton.Click += new System.EventHandler(LauncherCreateMap_Click);
+			this.LauncherCreateMapButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.LauncherCreateMapButton.Location = new System.Drawing.Point(82, 294);
+			this.LauncherCreateMapButton.Name = "LauncherCreateMapButton";
+			this.LauncherCreateMapButton.Size = new System.Drawing.Size(74, 24);
+			this.LauncherCreateMapButton.TabIndex = 4;
+			this.LauncherCreateMapButton.Text = "Create Map";
+			this.LauncherCreateMapButton.UseVisualStyleBackColor = true;
+			this.LauncherCreateMapButton.Click += new System.EventHandler(this.LauncherCreateMap_Click);
 			// 
 			// LauncherDeleteMapButton
 			// 
-			LauncherDeleteMapButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-			LauncherDeleteMapButton.Location = new System.Drawing.Point(6, 294);
-			LauncherDeleteMapButton.Name = "LauncherDeleteMapButton";
-			LauncherDeleteMapButton.Size = new System.Drawing.Size(74, 24);
-			LauncherDeleteMapButton.TabIndex = 4;
-			LauncherDeleteMapButton.Text = "Delete Map";
-			LauncherDeleteMapButton.UseVisualStyleBackColor = true;
-			LauncherDeleteMapButton.Click += new System.EventHandler(LauncherDeleteMap_Click);
+			this.LauncherDeleteMapButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.LauncherDeleteMapButton.Location = new System.Drawing.Point(6, 294);
+			this.LauncherDeleteMapButton.Name = "LauncherDeleteMapButton";
+			this.LauncherDeleteMapButton.Size = new System.Drawing.Size(74, 24);
+			this.LauncherDeleteMapButton.TabIndex = 4;
+			this.LauncherDeleteMapButton.Text = "Delete Map";
+			this.LauncherDeleteMapButton.UseVisualStyleBackColor = true;
+			this.LauncherDeleteMapButton.Click += new System.EventHandler(this.LauncherDeleteMap_Click);
 			// 
 			// LauncherCompileLevelOptionsGroupBox
 			// 
-			LauncherCompileLevelOptionsGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherCompileLevelOptionsGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherCompileReflectionsCheckBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherGridFileGroupBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherModSpecificMapComboBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherModSpecificMapCheckBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherCustomRunOptionsLabel);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherCustomRunOptionsTextBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(label);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherCompileLevelButton);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherCompileLightsButton);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherCompileBSPButton);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherUseRunGameTypeOptionsCheckBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherRunMapAfterCompileCheckBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherBspInfoCheckBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherBuildFastFilesCheckBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherConnectPathsCheckBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherCompileLightsCheckBox);
-			LauncherCompileLevelOptionsGroupBox.Controls.Add(LauncherCompileBSPCheckBox);
-			LauncherCompileLevelOptionsGroupBox.Location = new System.Drawing.Point(162, 6);
-			LauncherCompileLevelOptionsGroupBox.Name = "LauncherCompileLevelOptionsGroupBox";
-			LauncherCompileLevelOptionsGroupBox.Size = new System.Drawing.Size(473, 312);
-			LauncherCompileLevelOptionsGroupBox.TabIndex = 3;
-			LauncherCompileLevelOptionsGroupBox.TabStop = false;
-			LauncherCompileLevelOptionsGroupBox.Text = "Compile Level Options";
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherCompileReflectionsCheckBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherGridFileGroupBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherModSpecificMapComboBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherModSpecificMapCheckBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherCustomRunOptionsLabel);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherCustomRunOptionsTextBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.label);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherCompileLevelButton);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherCompileLightsButton);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherCompileBSPButton);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherUseRunGameTypeOptionsCheckBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherRunMapAfterCompileCheckBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherBspInfoCheckBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherBuildFastFilesCheckBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherConnectPathsCheckBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherCompileLightsCheckBox);
+			this.LauncherCompileLevelOptionsGroupBox.Controls.Add(this.LauncherCompileBSPCheckBox);
+			this.LauncherCompileLevelOptionsGroupBox.Location = new System.Drawing.Point(162, 6);
+			this.LauncherCompileLevelOptionsGroupBox.Name = "LauncherCompileLevelOptionsGroupBox";
+			this.LauncherCompileLevelOptionsGroupBox.Size = new System.Drawing.Size(473, 312);
+			this.LauncherCompileLevelOptionsGroupBox.TabIndex = 3;
+			this.LauncherCompileLevelOptionsGroupBox.TabStop = false;
+			this.LauncherCompileLevelOptionsGroupBox.Text = "Compile Level Options";
 			// 
 			// LauncherCompileReflectionsCheckBox
 			// 
-			LauncherCompileReflectionsCheckBox.AutoSize = true;
-			LauncherCompileReflectionsCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-			LauncherCompileReflectionsCheckBox.Location = new System.Drawing.Point(9, 88);
-			LauncherCompileReflectionsCheckBox.Name = "LauncherCompileReflectionsCheckBox";
-			LauncherCompileReflectionsCheckBox.Size = new System.Drawing.Size(117, 17);
-			LauncherCompileReflectionsCheckBox.TabIndex = 19;
-			LauncherCompileReflectionsCheckBox.Text = "Compile Reflections";
-			LauncherCompileReflectionsCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherCompileReflectionsCheckBox.AutoSize = true;
+			this.LauncherCompileReflectionsCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+			this.LauncherCompileReflectionsCheckBox.Location = new System.Drawing.Point(9, 88);
+			this.LauncherCompileReflectionsCheckBox.Name = "LauncherCompileReflectionsCheckBox";
+			this.LauncherCompileReflectionsCheckBox.Size = new System.Drawing.Size(117, 17);
+			this.LauncherCompileReflectionsCheckBox.TabIndex = 19;
+			this.LauncherCompileReflectionsCheckBox.Text = "Compile Reflections";
+			this.LauncherCompileReflectionsCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherGridFileGroupBox
 			// 
-			LauncherGridFileGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-			LauncherGridFileGroupBox.Controls.Add(LauncherGridEditExistingButton);
-			LauncherGridFileGroupBox.Controls.Add(LauncherGridMakeNewButton);
-			LauncherGridFileGroupBox.Controls.Add(LauncherGridCollectDotsCheckBox);
-			LauncherGridFileGroupBox.Location = new System.Drawing.Point(6, 230);
-			LauncherGridFileGroupBox.Name = "LauncherGridFileGroupBox";
-			LauncherGridFileGroupBox.Size = new System.Drawing.Size(223, 76);
-			LauncherGridFileGroupBox.TabIndex = 18;
-			LauncherGridFileGroupBox.TabStop = false;
-			LauncherGridFileGroupBox.Text = "Grid File";
+			this.LauncherGridFileGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.LauncherGridFileGroupBox.Controls.Add(this.LauncherGridEditExistingButton);
+			this.LauncherGridFileGroupBox.Controls.Add(this.LauncherGridMakeNewButton);
+			this.LauncherGridFileGroupBox.Controls.Add(this.LauncherGridCollectDotsCheckBox);
+			this.LauncherGridFileGroupBox.Location = new System.Drawing.Point(6, 230);
+			this.LauncherGridFileGroupBox.Name = "LauncherGridFileGroupBox";
+			this.LauncherGridFileGroupBox.Size = new System.Drawing.Size(223, 76);
+			this.LauncherGridFileGroupBox.TabIndex = 18;
+			this.LauncherGridFileGroupBox.TabStop = false;
+			this.LauncherGridFileGroupBox.Text = "Grid File";
 			// 
 			// LauncherGridEditExistingButton
 			// 
-			LauncherGridEditExistingButton.Location = new System.Drawing.Point(112, 42);
-			LauncherGridEditExistingButton.Name = "LauncherGridEditExistingButton";
-			LauncherGridEditExistingButton.Size = new System.Drawing.Size(100, 23);
-			LauncherGridEditExistingButton.TabIndex = 19;
-			LauncherGridEditExistingButton.Text = "Edit Existing Grid";
-			LauncherGridEditExistingButton.UseVisualStyleBackColor = true;
-			LauncherGridEditExistingButton.Click += new System.EventHandler(LauncherGridEditExistingButton_Click);
+			this.LauncherGridEditExistingButton.Location = new System.Drawing.Point(112, 42);
+			this.LauncherGridEditExistingButton.Name = "LauncherGridEditExistingButton";
+			this.LauncherGridEditExistingButton.Size = new System.Drawing.Size(100, 23);
+			this.LauncherGridEditExistingButton.TabIndex = 19;
+			this.LauncherGridEditExistingButton.Text = "Edit Existing Grid";
+			this.LauncherGridEditExistingButton.UseVisualStyleBackColor = true;
+			this.LauncherGridEditExistingButton.Click += new System.EventHandler(this.LauncherGridEditExistingButton_Click);
 			// 
 			// LauncherGridMakeNewButton
 			// 
-			LauncherGridMakeNewButton.Location = new System.Drawing.Point(6, 42);
-			LauncherGridMakeNewButton.Name = "LauncherGridMakeNewButton";
-			LauncherGridMakeNewButton.Size = new System.Drawing.Size(100, 23);
-			LauncherGridMakeNewButton.TabIndex = 18;
-			LauncherGridMakeNewButton.Text = "Make New Grid";
-			LauncherGridMakeNewButton.UseVisualStyleBackColor = true;
-			LauncherGridMakeNewButton.Click += new System.EventHandler(LauncherGridMakeNewButton_Click);
+			this.LauncherGridMakeNewButton.Location = new System.Drawing.Point(6, 42);
+			this.LauncherGridMakeNewButton.Name = "LauncherGridMakeNewButton";
+			this.LauncherGridMakeNewButton.Size = new System.Drawing.Size(100, 23);
+			this.LauncherGridMakeNewButton.TabIndex = 18;
+			this.LauncherGridMakeNewButton.Text = "Make New Grid";
+			this.LauncherGridMakeNewButton.UseVisualStyleBackColor = true;
+			this.LauncherGridMakeNewButton.Click += new System.EventHandler(this.LauncherGridMakeNewButton_Click);
 			// 
 			// LauncherGridCollectDotsCheckBox
 			// 
-			LauncherGridCollectDotsCheckBox.AutoSize = true;
-			LauncherGridCollectDotsCheckBox.Location = new System.Drawing.Point(6, 19);
-			LauncherGridCollectDotsCheckBox.Name = "LauncherGridCollectDotsCheckBox";
-			LauncherGridCollectDotsCheckBox.Size = new System.Drawing.Size(120, 17);
-			LauncherGridCollectDotsCheckBox.TabIndex = 17;
-			LauncherGridCollectDotsCheckBox.Text = "Models Collect Dots";
-			LauncherGridCollectDotsCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherGridCollectDotsCheckBox.AutoSize = true;
+			this.LauncherGridCollectDotsCheckBox.Location = new System.Drawing.Point(6, 19);
+			this.LauncherGridCollectDotsCheckBox.Name = "LauncherGridCollectDotsCheckBox";
+			this.LauncherGridCollectDotsCheckBox.Size = new System.Drawing.Size(120, 17);
+			this.LauncherGridCollectDotsCheckBox.TabIndex = 17;
+			this.LauncherGridCollectDotsCheckBox.Text = "Models Collect Dots";
+			this.LauncherGridCollectDotsCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherModSpecificMapComboBox
 			// 
-			LauncherModSpecificMapComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.LauncherModSpecificMapComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherModSpecificMapComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			LauncherModSpecificMapComboBox.Enabled = false;
-			LauncherModSpecificMapComboBox.FormattingEnabled = true;
-			LauncherModSpecificMapComboBox.Items.AddRange(new object[] {
+			this.LauncherModSpecificMapComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.LauncherModSpecificMapComboBox.Enabled = false;
+			this.LauncherModSpecificMapComboBox.FormattingEnabled = true;
+			this.LauncherModSpecificMapComboBox.Items.AddRange(new object[] {
             "HumorOneMod",
             "HumorTwoMod",
             "BlahBlahMod"});
-			LauncherModSpecificMapComboBox.Location = new System.Drawing.Point(149, 41);
-			LauncherModSpecificMapComboBox.Name = "LauncherModSpecificMapComboBox";
-			LauncherModSpecificMapComboBox.Size = new System.Drawing.Size(318, 21);
-			LauncherModSpecificMapComboBox.TabIndex = 4;
+			this.LauncherModSpecificMapComboBox.Location = new System.Drawing.Point(149, 41);
+			this.LauncherModSpecificMapComboBox.Name = "LauncherModSpecificMapComboBox";
+			this.LauncherModSpecificMapComboBox.Size = new System.Drawing.Size(318, 21);
+			this.LauncherModSpecificMapComboBox.TabIndex = 4;
 			// 
 			// LauncherModSpecificMapCheckBox
 			// 
-			LauncherModSpecificMapCheckBox.AutoSize = true;
-			LauncherModSpecificMapCheckBox.Location = new System.Drawing.Point(149, 16);
-			LauncherModSpecificMapCheckBox.Name = "LauncherModSpecificMapCheckBox";
-			LauncherModSpecificMapCheckBox.Size = new System.Drawing.Size(112, 17);
-			LauncherModSpecificMapCheckBox.TabIndex = 5;
-			LauncherModSpecificMapCheckBox.Text = "Mod Specific Map";
-			LauncherModSpecificMapCheckBox.UseVisualStyleBackColor = true;
-			LauncherModSpecificMapCheckBox.CheckedChanged += new System.EventHandler(LauncherModSpecificMapCheckBox_CheckedChanged);
+			this.LauncherModSpecificMapCheckBox.AutoSize = true;
+			this.LauncherModSpecificMapCheckBox.Location = new System.Drawing.Point(149, 16);
+			this.LauncherModSpecificMapCheckBox.Name = "LauncherModSpecificMapCheckBox";
+			this.LauncherModSpecificMapCheckBox.Size = new System.Drawing.Size(112, 17);
+			this.LauncherModSpecificMapCheckBox.TabIndex = 5;
+			this.LauncherModSpecificMapCheckBox.Text = "Mod Specific Map";
+			this.LauncherModSpecificMapCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherModSpecificMapCheckBox.CheckedChanged += new System.EventHandler(this.LauncherModSpecificMapCheckBox_CheckedChanged);
 			// 
 			// LauncherCustomRunOptionsLabel
 			// 
-			LauncherCustomRunOptionsLabel.AutoSize = true;
-			LauncherCustomRunOptionsLabel.Location = new System.Drawing.Point(6, 206);
-			LauncherCustomRunOptionsLabel.Name = "LauncherCustomRunOptionsLabel";
-			LauncherCustomRunOptionsLabel.Size = new System.Drawing.Size(107, 13);
-			LauncherCustomRunOptionsLabel.TabIndex = 14;
-			LauncherCustomRunOptionsLabel.Text = "Custom Run Options:";
-			LauncherCustomRunOptionsLabel.Visible = false;
+			this.LauncherCustomRunOptionsLabel.AutoSize = true;
+			this.LauncherCustomRunOptionsLabel.Location = new System.Drawing.Point(6, 206);
+			this.LauncherCustomRunOptionsLabel.Name = "LauncherCustomRunOptionsLabel";
+			this.LauncherCustomRunOptionsLabel.Size = new System.Drawing.Size(107, 13);
+			this.LauncherCustomRunOptionsLabel.TabIndex = 14;
+			this.LauncherCustomRunOptionsLabel.Text = "Custom Run Options:";
+			this.LauncherCustomRunOptionsLabel.Visible = false;
 			// 
 			// LauncherCustomRunOptionsTextBox
 			// 
-			LauncherCustomRunOptionsTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.LauncherCustomRunOptionsTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherCustomRunOptionsTextBox.Location = new System.Drawing.Point(119, 203);
-			LauncherCustomRunOptionsTextBox.Name = "LauncherCustomRunOptionsTextBox";
-			LauncherCustomRunOptionsTextBox.Size = new System.Drawing.Size(348, 20);
-			LauncherCustomRunOptionsTextBox.TabIndex = 13;
-			LauncherCustomRunOptionsTextBox.Visible = false;
+			this.LauncherCustomRunOptionsTextBox.Location = new System.Drawing.Point(119, 203);
+			this.LauncherCustomRunOptionsTextBox.Name = "LauncherCustomRunOptionsTextBox";
+			this.LauncherCustomRunOptionsTextBox.Size = new System.Drawing.Size(348, 20);
+			this.LauncherCustomRunOptionsTextBox.TabIndex = 13;
+			this.LauncherCustomRunOptionsTextBox.Visible = false;
 			// 
 			// label
 			// 
-			label.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.label.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			label.BackColor = System.Drawing.Color.Gainsboro;
-			label.CausesValidation = false;
-			label.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-			label.Location = new System.Drawing.Point(0, 107);
-			label.Name = "label";
-			label.Size = new System.Drawing.Size(473, 1);
-			label.TabIndex = 12;
+			this.label.BackColor = System.Drawing.Color.Gainsboro;
+			this.label.CausesValidation = false;
+			this.label.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+			this.label.Location = new System.Drawing.Point(0, 107);
+			this.label.Name = "label";
+			this.label.Size = new System.Drawing.Size(473, 1);
+			this.label.TabIndex = 12;
 			// 
 			// LauncherCompileLevelButton
 			// 
-			LauncherCompileLevelButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherCompileLevelButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			LauncherCompileLevelButton.Location = new System.Drawing.Point(340, 229);
-			LauncherCompileLevelButton.Name = "LauncherCompileLevelButton";
-			LauncherCompileLevelButton.Size = new System.Drawing.Size(128, 76);
-			LauncherCompileLevelButton.TabIndex = 4;
-			LauncherCompileLevelButton.Text = "Compile Level";
-			LauncherCompileLevelButton.UseVisualStyleBackColor = true;
-			LauncherCompileLevelButton.Click += new System.EventHandler(LauncherCompileLevelButton_Click);
+			this.LauncherCompileLevelButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherCompileLevelButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this.LauncherCompileLevelButton.Location = new System.Drawing.Point(340, 229);
+			this.LauncherCompileLevelButton.Name = "LauncherCompileLevelButton";
+			this.LauncherCompileLevelButton.Size = new System.Drawing.Size(128, 76);
+			this.LauncherCompileLevelButton.TabIndex = 4;
+			this.LauncherCompileLevelButton.Text = "Compile Level";
+			this.LauncherCompileLevelButton.UseVisualStyleBackColor = true;
+			this.LauncherCompileLevelButton.Click += new System.EventHandler(this.LauncherCompileLevelButton_Click);
 			// 
 			// LauncherCompileLightsButton
 			// 
-			LauncherCompileLightsButton.Location = new System.Drawing.Point(107, 16);
-			LauncherCompileLightsButton.Name = "LauncherCompileLightsButton";
-			LauncherCompileLightsButton.Size = new System.Drawing.Size(26, 23);
-			LauncherCompileLightsButton.TabIndex = 11;
-			LauncherCompileLightsButton.Text = "...";
-			LauncherCompileLightsButton.UseVisualStyleBackColor = true;
-			LauncherCompileLightsButton.Click += new System.EventHandler(LauncherCompileLightsButton_Click);
+			this.LauncherCompileLightsButton.Location = new System.Drawing.Point(107, 16);
+			this.LauncherCompileLightsButton.Name = "LauncherCompileLightsButton";
+			this.LauncherCompileLightsButton.Size = new System.Drawing.Size(26, 23);
+			this.LauncherCompileLightsButton.TabIndex = 11;
+			this.LauncherCompileLightsButton.Text = "...";
+			this.LauncherCompileLightsButton.UseVisualStyleBackColor = true;
+			this.LauncherCompileLightsButton.Click += new System.EventHandler(this.LauncherCompileLightsButton_Click);
 			// 
 			// LauncherCompileBSPButton
 			// 
-			LauncherCompileBSPButton.Location = new System.Drawing.Point(107, 39);
-			LauncherCompileBSPButton.Name = "LauncherCompileBSPButton";
-			LauncherCompileBSPButton.Size = new System.Drawing.Size(26, 23);
-			LauncherCompileBSPButton.TabIndex = 10;
-			LauncherCompileBSPButton.Text = "...";
-			LauncherCompileBSPButton.UseVisualStyleBackColor = true;
-			LauncherCompileBSPButton.Click += new System.EventHandler(LauncherCompileBSPButton_Click);
+			this.LauncherCompileBSPButton.Location = new System.Drawing.Point(107, 39);
+			this.LauncherCompileBSPButton.Name = "LauncherCompileBSPButton";
+			this.LauncherCompileBSPButton.Size = new System.Drawing.Size(26, 23);
+			this.LauncherCompileBSPButton.TabIndex = 10;
+			this.LauncherCompileBSPButton.Text = "...";
+			this.LauncherCompileBSPButton.UseVisualStyleBackColor = true;
+			this.LauncherCompileBSPButton.Click += new System.EventHandler(this.LauncherCompileBSPButton_Click);
 			// 
 			// LauncherUseRunGameTypeOptionsCheckBox
 			// 
-			LauncherUseRunGameTypeOptionsCheckBox.AutoSize = true;
-			LauncherUseRunGameTypeOptionsCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-			LauncherUseRunGameTypeOptionsCheckBox.Location = new System.Drawing.Point(9, 180);
-			LauncherUseRunGameTypeOptionsCheckBox.Name = "LauncherUseRunGameTypeOptionsCheckBox";
-			LauncherUseRunGameTypeOptionsCheckBox.Size = new System.Drawing.Size(162, 17);
-			LauncherUseRunGameTypeOptionsCheckBox.TabIndex = 9;
-			LauncherUseRunGameTypeOptionsCheckBox.Text = "Use \'Run Game Tab\' Options";
-			LauncherUseRunGameTypeOptionsCheckBox.UseVisualStyleBackColor = true;
-			LauncherUseRunGameTypeOptionsCheckBox.Visible = false;
+			this.LauncherUseRunGameTypeOptionsCheckBox.AutoSize = true;
+			this.LauncherUseRunGameTypeOptionsCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+			this.LauncherUseRunGameTypeOptionsCheckBox.Location = new System.Drawing.Point(9, 180);
+			this.LauncherUseRunGameTypeOptionsCheckBox.Name = "LauncherUseRunGameTypeOptionsCheckBox";
+			this.LauncherUseRunGameTypeOptionsCheckBox.Size = new System.Drawing.Size(162, 17);
+			this.LauncherUseRunGameTypeOptionsCheckBox.TabIndex = 9;
+			this.LauncherUseRunGameTypeOptionsCheckBox.Text = "Use \'Run Game Tab\' Options";
+			this.LauncherUseRunGameTypeOptionsCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherUseRunGameTypeOptionsCheckBox.Visible = false;
 			// 
 			// LauncherRunMapAfterCompileCheckBox
 			// 
-			LauncherRunMapAfterCompileCheckBox.AutoSize = true;
-			LauncherRunMapAfterCompileCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-			LauncherRunMapAfterCompileCheckBox.Location = new System.Drawing.Point(9, 157);
-			LauncherRunMapAfterCompileCheckBox.Name = "LauncherRunMapAfterCompileCheckBox";
-			LauncherRunMapAfterCompileCheckBox.Size = new System.Drawing.Size(133, 17);
-			LauncherRunMapAfterCompileCheckBox.TabIndex = 8;
-			LauncherRunMapAfterCompileCheckBox.Text = "Run Map After Compile";
-			LauncherRunMapAfterCompileCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherRunMapAfterCompileCheckBox.AutoSize = true;
+			this.LauncherRunMapAfterCompileCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+			this.LauncherRunMapAfterCompileCheckBox.Location = new System.Drawing.Point(9, 157);
+			this.LauncherRunMapAfterCompileCheckBox.Name = "LauncherRunMapAfterCompileCheckBox";
+			this.LauncherRunMapAfterCompileCheckBox.Size = new System.Drawing.Size(133, 17);
+			this.LauncherRunMapAfterCompileCheckBox.TabIndex = 8;
+			this.LauncherRunMapAfterCompileCheckBox.Text = "Run Map After Compile";
+			this.LauncherRunMapAfterCompileCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherBspInfoCheckBox
 			// 
-			LauncherBspInfoCheckBox.AutoSize = true;
-			LauncherBspInfoCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-			LauncherBspInfoCheckBox.Location = new System.Drawing.Point(9, 134);
-			LauncherBspInfoCheckBox.Name = "LauncherBspInfoCheckBox";
-			LauncherBspInfoCheckBox.Size = new System.Drawing.Size(66, 17);
-			LauncherBspInfoCheckBox.TabIndex = 7;
-			LauncherBspInfoCheckBox.Text = "BSP Info";
-			LauncherBspInfoCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherBspInfoCheckBox.AutoSize = true;
+			this.LauncherBspInfoCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+			this.LauncherBspInfoCheckBox.Location = new System.Drawing.Point(9, 134);
+			this.LauncherBspInfoCheckBox.Name = "LauncherBspInfoCheckBox";
+			this.LauncherBspInfoCheckBox.Size = new System.Drawing.Size(66, 17);
+			this.LauncherBspInfoCheckBox.TabIndex = 7;
+			this.LauncherBspInfoCheckBox.Text = "BSP Info";
+			this.LauncherBspInfoCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherBuildFastFilesCheckBox
 			// 
-			LauncherBuildFastFilesCheckBox.AutoSize = true;
-			LauncherBuildFastFilesCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-			LauncherBuildFastFilesCheckBox.Location = new System.Drawing.Point(9, 111);
-			LauncherBuildFastFilesCheckBox.Name = "LauncherBuildFastFilesCheckBox";
-			LauncherBuildFastFilesCheckBox.Size = new System.Drawing.Size(88, 17);
-			LauncherBuildFastFilesCheckBox.TabIndex = 6;
-			LauncherBuildFastFilesCheckBox.Text = "Build Fastfiles";
-			LauncherBuildFastFilesCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherBuildFastFilesCheckBox.AutoSize = true;
+			this.LauncherBuildFastFilesCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+			this.LauncherBuildFastFilesCheckBox.Location = new System.Drawing.Point(9, 111);
+			this.LauncherBuildFastFilesCheckBox.Name = "LauncherBuildFastFilesCheckBox";
+			this.LauncherBuildFastFilesCheckBox.Size = new System.Drawing.Size(88, 17);
+			this.LauncherBuildFastFilesCheckBox.TabIndex = 6;
+			this.LauncherBuildFastFilesCheckBox.Text = "Build Fastfiles";
+			this.LauncherBuildFastFilesCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherConnectPathsCheckBox
 			// 
-			LauncherConnectPathsCheckBox.AutoSize = true;
-			LauncherConnectPathsCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-			LauncherConnectPathsCheckBox.Location = new System.Drawing.Point(9, 65);
-			LauncherConnectPathsCheckBox.Name = "LauncherConnectPathsCheckBox";
-			LauncherConnectPathsCheckBox.Size = new System.Drawing.Size(94, 17);
-			LauncherConnectPathsCheckBox.TabIndex = 3;
-			LauncherConnectPathsCheckBox.Text = "Connect Paths";
-			LauncherConnectPathsCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherConnectPathsCheckBox.AutoSize = true;
+			this.LauncherConnectPathsCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+			this.LauncherConnectPathsCheckBox.Location = new System.Drawing.Point(9, 65);
+			this.LauncherConnectPathsCheckBox.Name = "LauncherConnectPathsCheckBox";
+			this.LauncherConnectPathsCheckBox.Size = new System.Drawing.Size(94, 17);
+			this.LauncherConnectPathsCheckBox.TabIndex = 3;
+			this.LauncherConnectPathsCheckBox.Text = "Connect Paths";
+			this.LauncherConnectPathsCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherCompileLightsCheckBox
 			// 
-			LauncherCompileLightsCheckBox.AutoSize = true;
-			LauncherCompileLightsCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-			LauncherCompileLightsCheckBox.Location = new System.Drawing.Point(9, 42);
-			LauncherCompileLightsCheckBox.Name = "LauncherCompileLightsCheckBox";
-			LauncherCompileLightsCheckBox.Size = new System.Drawing.Size(92, 17);
-			LauncherCompileLightsCheckBox.TabIndex = 1;
-			LauncherCompileLightsCheckBox.Text = "Compile Lights";
-			LauncherCompileLightsCheckBox.UseVisualStyleBackColor = true;
-			LauncherCompileLightsCheckBox.CheckedChanged += new System.EventHandler(LauncherCompileLightsCheckBox_CheckedChanged);
+			this.LauncherCompileLightsCheckBox.AutoSize = true;
+			this.LauncherCompileLightsCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+			this.LauncherCompileLightsCheckBox.Location = new System.Drawing.Point(9, 42);
+			this.LauncherCompileLightsCheckBox.Name = "LauncherCompileLightsCheckBox";
+			this.LauncherCompileLightsCheckBox.Size = new System.Drawing.Size(92, 17);
+			this.LauncherCompileLightsCheckBox.TabIndex = 1;
+			this.LauncherCompileLightsCheckBox.Text = "Compile Lights";
+			this.LauncherCompileLightsCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherCompileLightsCheckBox.CheckedChanged += new System.EventHandler(this.LauncherCompileLightsCheckBox_CheckedChanged);
 			// 
 			// LauncherCompileBSPCheckBox
 			// 
-			LauncherCompileBSPCheckBox.AutoSize = true;
-			LauncherCompileBSPCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
-			LauncherCompileBSPCheckBox.Location = new System.Drawing.Point(9, 19);
-			LauncherCompileBSPCheckBox.Name = "LauncherCompileBSPCheckBox";
-			LauncherCompileBSPCheckBox.Size = new System.Drawing.Size(85, 17);
-			LauncherCompileBSPCheckBox.TabIndex = 0;
-			LauncherCompileBSPCheckBox.Text = "Compile BSP";
-			LauncherCompileBSPCheckBox.UseVisualStyleBackColor = true;
+			this.LauncherCompileBSPCheckBox.AutoSize = true;
+			this.LauncherCompileBSPCheckBox.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+			this.LauncherCompileBSPCheckBox.Location = new System.Drawing.Point(9, 19);
+			this.LauncherCompileBSPCheckBox.Name = "LauncherCompileBSPCheckBox";
+			this.LauncherCompileBSPCheckBox.Size = new System.Drawing.Size(85, 17);
+			this.LauncherCompileBSPCheckBox.TabIndex = 0;
+			this.LauncherCompileBSPCheckBox.Text = "Compile BSP";
+			this.LauncherCompileBSPCheckBox.UseVisualStyleBackColor = true;
 			// 
 			// LauncherMapList
 			// 
-			LauncherMapList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherMapList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-			LauncherMapList.FormattingEnabled = true;
-			LauncherMapList.IntegralHeight = false;
-			LauncherMapList.Location = new System.Drawing.Point(6, 31);
-			LauncherMapList.Name = "LauncherMapList";
-			LauncherMapList.Size = new System.Drawing.Size(150, 261);
-			LauncherMapList.TabIndex = 1;
-			LauncherMapList.SelectedIndexChanged += new System.EventHandler(LauncherMapList_SelectedIndexChanged);
-			LauncherMapList.DoubleClick += new System.EventHandler(LauncherMapList_DoubleClick);
-			LauncherMapList.MouseDown += new System.Windows.Forms.MouseEventHandler(LauncherMapList_MouseDown);
-			LauncherMapList.MouseUp += new System.Windows.Forms.MouseEventHandler(LauncherMapList_MouseUp);
+			this.LauncherMapList.FormattingEnabled = true;
+			this.LauncherMapList.IntegralHeight = false;
+			this.LauncherMapList.Location = new System.Drawing.Point(6, 31);
+			this.LauncherMapList.Name = "LauncherMapList";
+			this.LauncherMapList.Size = new System.Drawing.Size(150, 261);
+			this.LauncherMapList.TabIndex = 1;
+			this.LauncherMapList.SelectedIndexChanged += new System.EventHandler(this.LauncherMapList_SelectedIndexChanged);
+			this.LauncherMapList.DoubleClick += new System.EventHandler(this.LauncherMapList_DoubleClick);
+			this.LauncherMapList.MouseDown += new System.Windows.Forms.MouseEventHandler(this.LauncherMapList_MouseDown);
+			this.LauncherMapList.MouseUp += new System.Windows.Forms.MouseEventHandler(this.LauncherMapList_MouseUp);
 			// 
 			// LauncherTabExplore
 			// 
-			LauncherTabExplore.Controls.Add(LauncherExploreGroupBox);
-			LauncherTabExplore.Location = new System.Drawing.Point(4, 22);
-			LauncherTabExplore.Name = "LauncherTabExplore";
-			LauncherTabExplore.Padding = new System.Windows.Forms.Padding(3);
-			LauncherTabExplore.Size = new System.Drawing.Size(641, 324);
-			LauncherTabExplore.TabIndex = 3;
-			LauncherTabExplore.Text = "Explore";
-			LauncherTabExplore.UseVisualStyleBackColor = true;
+			this.LauncherTabExplore.Controls.Add(this.LauncherExploreGroupBox);
+			this.LauncherTabExplore.Location = new System.Drawing.Point(4, 22);
+			this.LauncherTabExplore.Name = "LauncherTabExplore";
+			this.LauncherTabExplore.Padding = new System.Windows.Forms.Padding(3);
+			this.LauncherTabExplore.Size = new System.Drawing.Size(641, 324);
+			this.LauncherTabExplore.TabIndex = 3;
+			this.LauncherTabExplore.Text = "Explore";
+			this.LauncherTabExplore.UseVisualStyleBackColor = true;
 			// 
 			// LauncherExploreGroupBox
 			// 
-			LauncherExploreGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherExploreGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherExploreGroupBox.Controls.Add(LauncherExploreRawMapsDirGroupBox);
-			LauncherExploreGroupBox.Controls.Add(LauncherExploreRawDirGroupBox);
-			LauncherExploreGroupBox.Controls.Add(LauncherExploreDevDirGroupBox);
-			LauncherExploreGroupBox.Controls.Add(LauncherExploreBlopsDirGroupBox);
-			LauncherExploreGroupBox.Location = new System.Drawing.Point(6, 6);
-			LauncherExploreGroupBox.Name = "LauncherExploreGroupBox";
-			LauncherExploreGroupBox.Size = new System.Drawing.Size(629, 312);
-			LauncherExploreGroupBox.TabIndex = 0;
-			LauncherExploreGroupBox.TabStop = false;
-			LauncherExploreGroupBox.Text = "Explore";
+			this.LauncherExploreGroupBox.Controls.Add(this.LauncherExploreRawMapsDirGroupBox);
+			this.LauncherExploreGroupBox.Controls.Add(this.LauncherExploreRawDirGroupBox);
+			this.LauncherExploreGroupBox.Controls.Add(this.LauncherExploreDevDirGroupBox);
+			this.LauncherExploreGroupBox.Controls.Add(this.LauncherExploreBlopsDirGroupBox);
+			this.LauncherExploreGroupBox.Location = new System.Drawing.Point(6, 6);
+			this.LauncherExploreGroupBox.Name = "LauncherExploreGroupBox";
+			this.LauncherExploreGroupBox.Size = new System.Drawing.Size(629, 312);
+			this.LauncherExploreGroupBox.TabIndex = 0;
+			this.LauncherExploreGroupBox.TabStop = false;
+			this.LauncherExploreGroupBox.Text = "Explore";
 			// 
 			// LauncherExploreRawMapsDirGroupBox
 			// 
-			LauncherExploreRawMapsDirGroupBox.Controls.Add(LauncherExploreRawGSCDirMPGametypesButton);
-			LauncherExploreRawMapsDirGroupBox.Controls.Add(LauncherExploreRawGSCDirMPFXButton);
-			LauncherExploreRawMapsDirGroupBox.Controls.Add(LauncherExploreRawGSCDirMPArtButton);
-			LauncherExploreRawMapsDirGroupBox.Controls.Add(LauncherExploreRawGSCDirMPButton);
-			LauncherExploreRawMapsDirGroupBox.Controls.Add(LauncherExploreRawGSCDirSPVoiceButton);
-			LauncherExploreRawMapsDirGroupBox.Controls.Add(LauncherExploreRawGSCDirSPGametypesButton);
-			LauncherExploreRawMapsDirGroupBox.Controls.Add(LauncherExploreRawGSCDirSPFXButton);
-			LauncherExploreRawMapsDirGroupBox.Controls.Add(LauncherExploreRawGSCDirSPArtButton);
-			LauncherExploreRawMapsDirGroupBox.Controls.Add(LauncherExploreRawGSCDirSPButton);
-			LauncherExploreRawMapsDirGroupBox.Location = new System.Drawing.Point(463, 19);
-			LauncherExploreRawMapsDirGroupBox.Name = "LauncherExploreRawMapsDirGroupBox";
-			LauncherExploreRawMapsDirGroupBox.Size = new System.Drawing.Size(142, 226);
-			LauncherExploreRawMapsDirGroupBox.TabIndex = 20;
-			LauncherExploreRawMapsDirGroupBox.TabStop = false;
-			LauncherExploreRawMapsDirGroupBox.Text = "Raw Maps Folders";
+			this.LauncherExploreRawMapsDirGroupBox.Controls.Add(this.LauncherExploreRawGSCDirMPGametypesButton);
+			this.LauncherExploreRawMapsDirGroupBox.Controls.Add(this.LauncherExploreRawGSCDirMPFXButton);
+			this.LauncherExploreRawMapsDirGroupBox.Controls.Add(this.LauncherExploreRawGSCDirMPArtButton);
+			this.LauncherExploreRawMapsDirGroupBox.Controls.Add(this.LauncherExploreRawGSCDirMPButton);
+			this.LauncherExploreRawMapsDirGroupBox.Controls.Add(this.LauncherExploreRawGSCDirSPVoiceButton);
+			this.LauncherExploreRawMapsDirGroupBox.Controls.Add(this.LauncherExploreRawGSCDirSPGametypesButton);
+			this.LauncherExploreRawMapsDirGroupBox.Controls.Add(this.LauncherExploreRawGSCDirSPFXButton);
+			this.LauncherExploreRawMapsDirGroupBox.Controls.Add(this.LauncherExploreRawGSCDirSPArtButton);
+			this.LauncherExploreRawMapsDirGroupBox.Controls.Add(this.LauncherExploreRawGSCDirSPButton);
+			this.LauncherExploreRawMapsDirGroupBox.Location = new System.Drawing.Point(463, 19);
+			this.LauncherExploreRawMapsDirGroupBox.Name = "LauncherExploreRawMapsDirGroupBox";
+			this.LauncherExploreRawMapsDirGroupBox.Size = new System.Drawing.Size(142, 226);
+			this.LauncherExploreRawMapsDirGroupBox.TabIndex = 20;
+			this.LauncherExploreRawMapsDirGroupBox.TabStop = false;
+			this.LauncherExploreRawMapsDirGroupBox.Text = "Raw Maps Folders";
 			// 
 			// LauncherExploreRawGSCDirMPGametypesButton
 			// 
-			LauncherExploreRawGSCDirMPGametypesButton.Location = new System.Drawing.Point(6, 198);
-			LauncherExploreRawGSCDirMPGametypesButton.Name = "LauncherExploreRawGSCDirMPGametypesButton";
-			LauncherExploreRawGSCDirMPGametypesButton.Size = new System.Drawing.Size(64, 24);
-			LauncherExploreRawGSCDirMPGametypesButton.TabIndex = 29;
-			LauncherExploreRawGSCDirMPGametypesButton.Text = "Gametypes";
-			LauncherExploreRawGSCDirMPGametypesButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawGSCDirMPGametypesButton.Click += new System.EventHandler(LauncherExploreRawGSCDirMPGametypesButton_Click);
+			this.LauncherExploreRawGSCDirMPGametypesButton.Location = new System.Drawing.Point(6, 198);
+			this.LauncherExploreRawGSCDirMPGametypesButton.Name = "LauncherExploreRawGSCDirMPGametypesButton";
+			this.LauncherExploreRawGSCDirMPGametypesButton.Size = new System.Drawing.Size(64, 24);
+			this.LauncherExploreRawGSCDirMPGametypesButton.TabIndex = 29;
+			this.LauncherExploreRawGSCDirMPGametypesButton.Text = "Gametypes";
+			this.LauncherExploreRawGSCDirMPGametypesButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawGSCDirMPGametypesButton.Click += new System.EventHandler(this.LauncherExploreRawGSCDirMPGametypesButton_Click);
 			// 
 			// LauncherExploreRawGSCDirMPFXButton
 			// 
-			LauncherExploreRawGSCDirMPFXButton.Location = new System.Drawing.Point(72, 168);
-			LauncherExploreRawGSCDirMPFXButton.Name = "LauncherExploreRawGSCDirMPFXButton";
-			LauncherExploreRawGSCDirMPFXButton.Size = new System.Drawing.Size(64, 24);
-			LauncherExploreRawGSCDirMPFXButton.TabIndex = 28;
-			LauncherExploreRawGSCDirMPFXButton.Text = "CreateFX";
-			LauncherExploreRawGSCDirMPFXButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawGSCDirMPFXButton.Click += new System.EventHandler(LauncherExploreRawGSCDirMPFXButton_Click);
+			this.LauncherExploreRawGSCDirMPFXButton.Location = new System.Drawing.Point(72, 168);
+			this.LauncherExploreRawGSCDirMPFXButton.Name = "LauncherExploreRawGSCDirMPFXButton";
+			this.LauncherExploreRawGSCDirMPFXButton.Size = new System.Drawing.Size(64, 24);
+			this.LauncherExploreRawGSCDirMPFXButton.TabIndex = 28;
+			this.LauncherExploreRawGSCDirMPFXButton.Text = "CreateFX";
+			this.LauncherExploreRawGSCDirMPFXButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawGSCDirMPFXButton.Click += new System.EventHandler(this.LauncherExploreRawGSCDirMPFXButton_Click);
 			// 
 			// LauncherExploreRawGSCDirMPArtButton
 			// 
-			LauncherExploreRawGSCDirMPArtButton.Location = new System.Drawing.Point(6, 168);
-			LauncherExploreRawGSCDirMPArtButton.Name = "LauncherExploreRawGSCDirMPArtButton";
-			LauncherExploreRawGSCDirMPArtButton.Size = new System.Drawing.Size(64, 24);
-			LauncherExploreRawGSCDirMPArtButton.TabIndex = 27;
-			LauncherExploreRawGSCDirMPArtButton.Text = "CreateArt";
-			LauncherExploreRawGSCDirMPArtButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawGSCDirMPArtButton.Click += new System.EventHandler(LauncherExploreRawGSCDirMPArtButton_Click);
+			this.LauncherExploreRawGSCDirMPArtButton.Location = new System.Drawing.Point(6, 168);
+			this.LauncherExploreRawGSCDirMPArtButton.Name = "LauncherExploreRawGSCDirMPArtButton";
+			this.LauncherExploreRawGSCDirMPArtButton.Size = new System.Drawing.Size(64, 24);
+			this.LauncherExploreRawGSCDirMPArtButton.TabIndex = 27;
+			this.LauncherExploreRawGSCDirMPArtButton.Text = "CreateArt";
+			this.LauncherExploreRawGSCDirMPArtButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawGSCDirMPArtButton.Click += new System.EventHandler(this.LauncherExploreRawGSCDirMPArtButton_Click);
 			// 
 			// LauncherExploreRawGSCDirMPButton
 			// 
-			LauncherExploreRawGSCDirMPButton.Location = new System.Drawing.Point(6, 138);
-			LauncherExploreRawGSCDirMPButton.Name = "LauncherExploreRawGSCDirMPButton";
-			LauncherExploreRawGSCDirMPButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawGSCDirMPButton.TabIndex = 26;
-			LauncherExploreRawGSCDirMPButton.Text = "Multiplayer";
-			LauncherExploreRawGSCDirMPButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawGSCDirMPButton.Click += new System.EventHandler(LauncherExploreRawGSCDirMPButton_Click);
+			this.LauncherExploreRawGSCDirMPButton.Location = new System.Drawing.Point(6, 138);
+			this.LauncherExploreRawGSCDirMPButton.Name = "LauncherExploreRawGSCDirMPButton";
+			this.LauncherExploreRawGSCDirMPButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawGSCDirMPButton.TabIndex = 26;
+			this.LauncherExploreRawGSCDirMPButton.Text = "Multiplayer";
+			this.LauncherExploreRawGSCDirMPButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawGSCDirMPButton.Click += new System.EventHandler(this.LauncherExploreRawGSCDirMPButton_Click);
 			// 
 			// LauncherExploreRawGSCDirSPVoiceButton
 			// 
-			LauncherExploreRawGSCDirSPVoiceButton.Location = new System.Drawing.Point(72, 79);
-			LauncherExploreRawGSCDirSPVoiceButton.Name = "LauncherExploreRawGSCDirSPVoiceButton";
-			LauncherExploreRawGSCDirSPVoiceButton.Size = new System.Drawing.Size(64, 24);
-			LauncherExploreRawGSCDirSPVoiceButton.TabIndex = 25;
-			LauncherExploreRawGSCDirSPVoiceButton.Text = "Voice";
-			LauncherExploreRawGSCDirSPVoiceButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawGSCDirSPVoiceButton.Click += new System.EventHandler(LauncherExploreRawGSCDirSPVoiceButton_Click);
+			this.LauncherExploreRawGSCDirSPVoiceButton.Location = new System.Drawing.Point(72, 79);
+			this.LauncherExploreRawGSCDirSPVoiceButton.Name = "LauncherExploreRawGSCDirSPVoiceButton";
+			this.LauncherExploreRawGSCDirSPVoiceButton.Size = new System.Drawing.Size(64, 24);
+			this.LauncherExploreRawGSCDirSPVoiceButton.TabIndex = 25;
+			this.LauncherExploreRawGSCDirSPVoiceButton.Text = "Voice";
+			this.LauncherExploreRawGSCDirSPVoiceButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawGSCDirSPVoiceButton.Click += new System.EventHandler(this.LauncherExploreRawGSCDirSPVoiceButton_Click);
 			// 
 			// LauncherExploreRawGSCDirSPGametypesButton
 			// 
-			LauncherExploreRawGSCDirSPGametypesButton.Location = new System.Drawing.Point(6, 79);
-			LauncherExploreRawGSCDirSPGametypesButton.Name = "LauncherExploreRawGSCDirSPGametypesButton";
-			LauncherExploreRawGSCDirSPGametypesButton.Size = new System.Drawing.Size(64, 24);
-			LauncherExploreRawGSCDirSPGametypesButton.TabIndex = 24;
-			LauncherExploreRawGSCDirSPGametypesButton.Text = "Gametypes";
-			LauncherExploreRawGSCDirSPGametypesButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawGSCDirSPGametypesButton.Click += new System.EventHandler(LauncherExploreRawGSCDirSPGametypesButton_Click);
+			this.LauncherExploreRawGSCDirSPGametypesButton.Location = new System.Drawing.Point(6, 79);
+			this.LauncherExploreRawGSCDirSPGametypesButton.Name = "LauncherExploreRawGSCDirSPGametypesButton";
+			this.LauncherExploreRawGSCDirSPGametypesButton.Size = new System.Drawing.Size(64, 24);
+			this.LauncherExploreRawGSCDirSPGametypesButton.TabIndex = 24;
+			this.LauncherExploreRawGSCDirSPGametypesButton.Text = "Gametypes";
+			this.LauncherExploreRawGSCDirSPGametypesButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawGSCDirSPGametypesButton.Click += new System.EventHandler(this.LauncherExploreRawGSCDirSPGametypesButton_Click);
 			// 
 			// LauncherExploreRawGSCDirSPFXButton
 			// 
-			LauncherExploreRawGSCDirSPFXButton.Location = new System.Drawing.Point(72, 49);
-			LauncherExploreRawGSCDirSPFXButton.Name = "LauncherExploreRawGSCDirSPFXButton";
-			LauncherExploreRawGSCDirSPFXButton.Size = new System.Drawing.Size(64, 24);
-			LauncherExploreRawGSCDirSPFXButton.TabIndex = 23;
-			LauncherExploreRawGSCDirSPFXButton.Text = "CreateFX";
-			LauncherExploreRawGSCDirSPFXButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawGSCDirSPFXButton.Click += new System.EventHandler(LauncherExploreRawGSCDirSPFXButton_Click);
+			this.LauncherExploreRawGSCDirSPFXButton.Location = new System.Drawing.Point(72, 49);
+			this.LauncherExploreRawGSCDirSPFXButton.Name = "LauncherExploreRawGSCDirSPFXButton";
+			this.LauncherExploreRawGSCDirSPFXButton.Size = new System.Drawing.Size(64, 24);
+			this.LauncherExploreRawGSCDirSPFXButton.TabIndex = 23;
+			this.LauncherExploreRawGSCDirSPFXButton.Text = "CreateFX";
+			this.LauncherExploreRawGSCDirSPFXButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawGSCDirSPFXButton.Click += new System.EventHandler(this.LauncherExploreRawGSCDirSPFXButton_Click);
 			// 
 			// LauncherExploreRawGSCDirSPArtButton
 			// 
-			LauncherExploreRawGSCDirSPArtButton.Location = new System.Drawing.Point(6, 49);
-			LauncherExploreRawGSCDirSPArtButton.Name = "LauncherExploreRawGSCDirSPArtButton";
-			LauncherExploreRawGSCDirSPArtButton.Size = new System.Drawing.Size(64, 24);
-			LauncherExploreRawGSCDirSPArtButton.TabIndex = 22;
-			LauncherExploreRawGSCDirSPArtButton.Text = "CreateArt";
-			LauncherExploreRawGSCDirSPArtButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawGSCDirSPArtButton.Click += new System.EventHandler(LauncherExploreRawGSCDirSPArtButton_Click);
+			this.LauncherExploreRawGSCDirSPArtButton.Location = new System.Drawing.Point(6, 49);
+			this.LauncherExploreRawGSCDirSPArtButton.Name = "LauncherExploreRawGSCDirSPArtButton";
+			this.LauncherExploreRawGSCDirSPArtButton.Size = new System.Drawing.Size(64, 24);
+			this.LauncherExploreRawGSCDirSPArtButton.TabIndex = 22;
+			this.LauncherExploreRawGSCDirSPArtButton.Text = "CreateArt";
+			this.LauncherExploreRawGSCDirSPArtButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawGSCDirSPArtButton.Click += new System.EventHandler(this.LauncherExploreRawGSCDirSPArtButton_Click);
 			// 
 			// LauncherExploreRawGSCDirSPButton
 			// 
-			LauncherExploreRawGSCDirSPButton.Location = new System.Drawing.Point(6, 19);
-			LauncherExploreRawGSCDirSPButton.Name = "LauncherExploreRawGSCDirSPButton";
-			LauncherExploreRawGSCDirSPButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawGSCDirSPButton.TabIndex = 21;
-			LauncherExploreRawGSCDirSPButton.Text = "Singleplayer";
-			LauncherExploreRawGSCDirSPButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawGSCDirSPButton.Click += new System.EventHandler(LauncherExploreRawGSCDirSPButton_Click);
+			this.LauncherExploreRawGSCDirSPButton.Location = new System.Drawing.Point(6, 19);
+			this.LauncherExploreRawGSCDirSPButton.Name = "LauncherExploreRawGSCDirSPButton";
+			this.LauncherExploreRawGSCDirSPButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawGSCDirSPButton.TabIndex = 21;
+			this.LauncherExploreRawGSCDirSPButton.Text = "Singleplayer";
+			this.LauncherExploreRawGSCDirSPButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawGSCDirSPButton.Click += new System.EventHandler(this.LauncherExploreRawGSCDirSPButton_Click);
 			// 
 			// LauncherExploreRawDirGroupBox
 			// 
-			LauncherExploreRawDirGroupBox.Controls.Add(LauncherExploreRawDirFXButton);
-			LauncherExploreRawDirGroupBox.Controls.Add(LauncherExploreRawDirMPButton);
-			LauncherExploreRawDirGroupBox.Controls.Add(LauncherExploreRawDirWeaponsButton);
-			LauncherExploreRawDirGroupBox.Controls.Add(LauncherExploreRawDirVisionButton);
-			LauncherExploreRawDirGroupBox.Controls.Add(LauncherExploreRawDirLocsButton);
-			LauncherExploreRawDirGroupBox.Controls.Add(LauncherExploreRawDirAnimTreesButton);
-			LauncherExploreRawDirGroupBox.Controls.Add(LauncherExploreRawDirSoundAliasesButton);
-			LauncherExploreRawDirGroupBox.Controls.Add(LauncherExploreRawDirCSCButton);
-			LauncherExploreRawDirGroupBox.Controls.Add(LauncherExploreRawDirGSCButton);
-			LauncherExploreRawDirGroupBox.Location = new System.Drawing.Point(315, 19);
-			LauncherExploreRawDirGroupBox.Name = "LauncherExploreRawDirGroupBox";
-			LauncherExploreRawDirGroupBox.Size = new System.Drawing.Size(142, 287);
-			LauncherExploreRawDirGroupBox.TabIndex = 19;
-			LauncherExploreRawDirGroupBox.TabStop = false;
-			LauncherExploreRawDirGroupBox.Text = "Raw Folders";
+			this.LauncherExploreRawDirGroupBox.Controls.Add(this.LauncherExploreRawDirFXButton);
+			this.LauncherExploreRawDirGroupBox.Controls.Add(this.LauncherExploreRawDirMPButton);
+			this.LauncherExploreRawDirGroupBox.Controls.Add(this.LauncherExploreRawDirWeaponsButton);
+			this.LauncherExploreRawDirGroupBox.Controls.Add(this.LauncherExploreRawDirVisionButton);
+			this.LauncherExploreRawDirGroupBox.Controls.Add(this.LauncherExploreRawDirLocsButton);
+			this.LauncherExploreRawDirGroupBox.Controls.Add(this.LauncherExploreRawDirAnimTreesButton);
+			this.LauncherExploreRawDirGroupBox.Controls.Add(this.LauncherExploreRawDirSoundAliasesButton);
+			this.LauncherExploreRawDirGroupBox.Controls.Add(this.LauncherExploreRawDirCSCButton);
+			this.LauncherExploreRawDirGroupBox.Controls.Add(this.LauncherExploreRawDirGSCButton);
+			this.LauncherExploreRawDirGroupBox.Location = new System.Drawing.Point(315, 19);
+			this.LauncherExploreRawDirGroupBox.Name = "LauncherExploreRawDirGroupBox";
+			this.LauncherExploreRawDirGroupBox.Size = new System.Drawing.Size(142, 287);
+			this.LauncherExploreRawDirGroupBox.TabIndex = 19;
+			this.LauncherExploreRawDirGroupBox.TabStop = false;
+			this.LauncherExploreRawDirGroupBox.Text = "Raw Folders";
 			// 
 			// LauncherExploreRawDirFXButton
 			// 
-			LauncherExploreRawDirFXButton.Location = new System.Drawing.Point(6, 109);
-			LauncherExploreRawDirFXButton.Name = "LauncherExploreRawDirFXButton";
-			LauncherExploreRawDirFXButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawDirFXButton.TabIndex = 25;
-			LauncherExploreRawDirFXButton.Text = "FX";
-			LauncherExploreRawDirFXButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawDirFXButton.Click += new System.EventHandler(LauncherExploreRawDirFXButton_Click);
+			this.LauncherExploreRawDirFXButton.Location = new System.Drawing.Point(6, 109);
+			this.LauncherExploreRawDirFXButton.Name = "LauncherExploreRawDirFXButton";
+			this.LauncherExploreRawDirFXButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawDirFXButton.TabIndex = 25;
+			this.LauncherExploreRawDirFXButton.Text = "FX";
+			this.LauncherExploreRawDirFXButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawDirFXButton.Click += new System.EventHandler(this.LauncherExploreRawDirFXButton_Click);
 			// 
 			// LauncherExploreRawDirMPButton
 			// 
-			LauncherExploreRawDirMPButton.Location = new System.Drawing.Point(6, 168);
-			LauncherExploreRawDirMPButton.Name = "LauncherExploreRawDirMPButton";
-			LauncherExploreRawDirMPButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawDirMPButton.TabIndex = 24;
-			LauncherExploreRawDirMPButton.Text = "MP";
-			LauncherExploreRawDirMPButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawDirMPButton.Click += new System.EventHandler(LauncherExploreRawDirMPButton_Click);
+			this.LauncherExploreRawDirMPButton.Location = new System.Drawing.Point(6, 168);
+			this.LauncherExploreRawDirMPButton.Name = "LauncherExploreRawDirMPButton";
+			this.LauncherExploreRawDirMPButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawDirMPButton.TabIndex = 24;
+			this.LauncherExploreRawDirMPButton.Text = "MP";
+			this.LauncherExploreRawDirMPButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawDirMPButton.Click += new System.EventHandler(this.LauncherExploreRawDirMPButton_Click);
 			// 
 			// LauncherExploreRawDirWeaponsButton
 			// 
-			LauncherExploreRawDirWeaponsButton.Location = new System.Drawing.Point(6, 258);
-			LauncherExploreRawDirWeaponsButton.Name = "LauncherExploreRawDirWeaponsButton";
-			LauncherExploreRawDirWeaponsButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawDirWeaponsButton.TabIndex = 23;
-			LauncherExploreRawDirWeaponsButton.Text = "Weapons";
-			LauncherExploreRawDirWeaponsButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawDirWeaponsButton.Click += new System.EventHandler(LauncherExploreRawDirWeaponsButton_Click);
+			this.LauncherExploreRawDirWeaponsButton.Location = new System.Drawing.Point(6, 258);
+			this.LauncherExploreRawDirWeaponsButton.Name = "LauncherExploreRawDirWeaponsButton";
+			this.LauncherExploreRawDirWeaponsButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawDirWeaponsButton.TabIndex = 23;
+			this.LauncherExploreRawDirWeaponsButton.Text = "Weapons";
+			this.LauncherExploreRawDirWeaponsButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawDirWeaponsButton.Click += new System.EventHandler(this.LauncherExploreRawDirWeaponsButton_Click);
 			// 
 			// LauncherExploreRawDirVisionButton
 			// 
-			LauncherExploreRawDirVisionButton.Location = new System.Drawing.Point(6, 228);
-			LauncherExploreRawDirVisionButton.Name = "LauncherExploreRawDirVisionButton";
-			LauncherExploreRawDirVisionButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawDirVisionButton.TabIndex = 22;
-			LauncherExploreRawDirVisionButton.Text = "Vision";
-			LauncherExploreRawDirVisionButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawDirVisionButton.Click += new System.EventHandler(LauncherExploreRawDirVisionButton_Click);
+			this.LauncherExploreRawDirVisionButton.Location = new System.Drawing.Point(6, 228);
+			this.LauncherExploreRawDirVisionButton.Name = "LauncherExploreRawDirVisionButton";
+			this.LauncherExploreRawDirVisionButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawDirVisionButton.TabIndex = 22;
+			this.LauncherExploreRawDirVisionButton.Text = "Vision";
+			this.LauncherExploreRawDirVisionButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawDirVisionButton.Click += new System.EventHandler(this.LauncherExploreRawDirVisionButton_Click);
 			// 
 			// LauncherExploreRawDirLocsButton
 			// 
-			LauncherExploreRawDirLocsButton.Location = new System.Drawing.Point(6, 79);
-			LauncherExploreRawDirLocsButton.Name = "LauncherExploreRawDirLocsButton";
-			LauncherExploreRawDirLocsButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawDirLocsButton.TabIndex = 21;
-			LauncherExploreRawDirLocsButton.Text = "English Strings";
-			LauncherExploreRawDirLocsButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawDirLocsButton.Click += new System.EventHandler(LauncherExploreRawDirLocsButton_Click);
+			this.LauncherExploreRawDirLocsButton.Location = new System.Drawing.Point(6, 79);
+			this.LauncherExploreRawDirLocsButton.Name = "LauncherExploreRawDirLocsButton";
+			this.LauncherExploreRawDirLocsButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawDirLocsButton.TabIndex = 21;
+			this.LauncherExploreRawDirLocsButton.Text = "English Strings";
+			this.LauncherExploreRawDirLocsButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawDirLocsButton.Click += new System.EventHandler(this.LauncherExploreRawDirLocsButton_Click);
 			// 
 			// LauncherExploreRawDirAnimTreesButton
 			// 
-			LauncherExploreRawDirAnimTreesButton.Location = new System.Drawing.Point(6, 19);
-			LauncherExploreRawDirAnimTreesButton.Name = "LauncherExploreRawDirAnimTreesButton";
-			LauncherExploreRawDirAnimTreesButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawDirAnimTreesButton.TabIndex = 20;
-			LauncherExploreRawDirAnimTreesButton.Text = "AnimTrees";
-			LauncherExploreRawDirAnimTreesButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawDirAnimTreesButton.Click += new System.EventHandler(LauncherExploreRawDirAnimTreesButton_Click);
+			this.LauncherExploreRawDirAnimTreesButton.Location = new System.Drawing.Point(6, 19);
+			this.LauncherExploreRawDirAnimTreesButton.Name = "LauncherExploreRawDirAnimTreesButton";
+			this.LauncherExploreRawDirAnimTreesButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawDirAnimTreesButton.TabIndex = 20;
+			this.LauncherExploreRawDirAnimTreesButton.Text = "AnimTrees";
+			this.LauncherExploreRawDirAnimTreesButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawDirAnimTreesButton.Click += new System.EventHandler(this.LauncherExploreRawDirAnimTreesButton_Click);
 			// 
 			// LauncherExploreRawDirSoundAliasesButton
 			// 
-			LauncherExploreRawDirSoundAliasesButton.Location = new System.Drawing.Point(6, 198);
-			LauncherExploreRawDirSoundAliasesButton.Name = "LauncherExploreRawDirSoundAliasesButton";
-			LauncherExploreRawDirSoundAliasesButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawDirSoundAliasesButton.TabIndex = 19;
-			LauncherExploreRawDirSoundAliasesButton.Text = "Sound Aliases";
-			LauncherExploreRawDirSoundAliasesButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawDirSoundAliasesButton.Click += new System.EventHandler(LauncherExploreRawDirSoundAliasesButton_Click);
+			this.LauncherExploreRawDirSoundAliasesButton.Location = new System.Drawing.Point(6, 198);
+			this.LauncherExploreRawDirSoundAliasesButton.Name = "LauncherExploreRawDirSoundAliasesButton";
+			this.LauncherExploreRawDirSoundAliasesButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawDirSoundAliasesButton.TabIndex = 19;
+			this.LauncherExploreRawDirSoundAliasesButton.Text = "Sound Aliases";
+			this.LauncherExploreRawDirSoundAliasesButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawDirSoundAliasesButton.Click += new System.EventHandler(this.LauncherExploreRawDirSoundAliasesButton_Click);
 			// 
 			// LauncherExploreRawDirCSCButton
 			// 
-			LauncherExploreRawDirCSCButton.Location = new System.Drawing.Point(6, 49);
-			LauncherExploreRawDirCSCButton.Name = "LauncherExploreRawDirCSCButton";
-			LauncherExploreRawDirCSCButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawDirCSCButton.TabIndex = 18;
-			LauncherExploreRawDirCSCButton.Text = "Clientscripts";
-			LauncherExploreRawDirCSCButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawDirCSCButton.Click += new System.EventHandler(LauncherExploreRawDirCSCButton_Click);
+			this.LauncherExploreRawDirCSCButton.Location = new System.Drawing.Point(6, 49);
+			this.LauncherExploreRawDirCSCButton.Name = "LauncherExploreRawDirCSCButton";
+			this.LauncherExploreRawDirCSCButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawDirCSCButton.TabIndex = 18;
+			this.LauncherExploreRawDirCSCButton.Text = "Clientscripts";
+			this.LauncherExploreRawDirCSCButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawDirCSCButton.Click += new System.EventHandler(this.LauncherExploreRawDirCSCButton_Click);
 			// 
 			// LauncherExploreRawDirGSCButton
 			// 
-			LauncherExploreRawDirGSCButton.Location = new System.Drawing.Point(6, 139);
-			LauncherExploreRawDirGSCButton.Name = "LauncherExploreRawDirGSCButton";
-			LauncherExploreRawDirGSCButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreRawDirGSCButton.TabIndex = 17;
-			LauncherExploreRawDirGSCButton.Text = "Maps";
-			LauncherExploreRawDirGSCButton.UseVisualStyleBackColor = true;
-			LauncherExploreRawDirGSCButton.Click += new System.EventHandler(LauncherExploreRawDirGSCButton_Click);
+			this.LauncherExploreRawDirGSCButton.Location = new System.Drawing.Point(6, 139);
+			this.LauncherExploreRawDirGSCButton.Name = "LauncherExploreRawDirGSCButton";
+			this.LauncherExploreRawDirGSCButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreRawDirGSCButton.TabIndex = 17;
+			this.LauncherExploreRawDirGSCButton.Text = "Maps";
+			this.LauncherExploreRawDirGSCButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreRawDirGSCButton.Click += new System.EventHandler(this.LauncherExploreRawDirGSCButton_Click);
 			// 
 			// LauncherExploreDevDirGroupBox
 			// 
-			LauncherExploreDevDirGroupBox.Controls.Add(LauncherExploreDevDirRawButton);
-			LauncherExploreDevDirGroupBox.Controls.Add(LauncherExploreDevDirModelExportButton);
-			LauncherExploreDevDirGroupBox.Controls.Add(LauncherExploreDevDirTextureAssetsButton);
-			LauncherExploreDevDirGroupBox.Controls.Add(LauncherExploreDevDirSrcDataButton);
-			LauncherExploreDevDirGroupBox.Controls.Add(LauncherExploreDevDirMapSrcButton);
-			LauncherExploreDevDirGroupBox.Controls.Add(LauncherExploreDevDirBinButton);
-			LauncherExploreDevDirGroupBox.Controls.Add(LauncherExploreDevDirZoneSourceButton);
-			LauncherExploreDevDirGroupBox.Location = new System.Drawing.Point(167, 19);
-			LauncherExploreDevDirGroupBox.Name = "LauncherExploreDevDirGroupBox";
-			LauncherExploreDevDirGroupBox.Size = new System.Drawing.Size(142, 226);
-			LauncherExploreDevDirGroupBox.TabIndex = 18;
-			LauncherExploreDevDirGroupBox.TabStop = false;
-			LauncherExploreDevDirGroupBox.Text = "Development Directories";
+			this.LauncherExploreDevDirGroupBox.Controls.Add(this.LauncherExploreDevDirRawButton);
+			this.LauncherExploreDevDirGroupBox.Controls.Add(this.LauncherExploreDevDirModelExportButton);
+			this.LauncherExploreDevDirGroupBox.Controls.Add(this.LauncherExploreDevDirTextureAssetsButton);
+			this.LauncherExploreDevDirGroupBox.Controls.Add(this.LauncherExploreDevDirSrcDataButton);
+			this.LauncherExploreDevDirGroupBox.Controls.Add(this.LauncherExploreDevDirMapSrcButton);
+			this.LauncherExploreDevDirGroupBox.Controls.Add(this.LauncherExploreDevDirBinButton);
+			this.LauncherExploreDevDirGroupBox.Controls.Add(this.LauncherExploreDevDirZoneSourceButton);
+			this.LauncherExploreDevDirGroupBox.Location = new System.Drawing.Point(167, 19);
+			this.LauncherExploreDevDirGroupBox.Name = "LauncherExploreDevDirGroupBox";
+			this.LauncherExploreDevDirGroupBox.Size = new System.Drawing.Size(142, 226);
+			this.LauncherExploreDevDirGroupBox.TabIndex = 18;
+			this.LauncherExploreDevDirGroupBox.TabStop = false;
+			this.LauncherExploreDevDirGroupBox.Text = "Development Directories";
 			// 
 			// LauncherExploreDevDirRawButton
 			// 
-			LauncherExploreDevDirRawButton.Location = new System.Drawing.Point(6, 108);
-			LauncherExploreDevDirRawButton.Name = "LauncherExploreDevDirRawButton";
-			LauncherExploreDevDirRawButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreDevDirRawButton.TabIndex = 19;
-			LauncherExploreDevDirRawButton.Text = "Raw";
-			LauncherExploreDevDirRawButton.UseVisualStyleBackColor = true;
-			LauncherExploreDevDirRawButton.Click += new System.EventHandler(LauncherExploreDevDirRawButton_Click);
+			this.LauncherExploreDevDirRawButton.Location = new System.Drawing.Point(6, 108);
+			this.LauncherExploreDevDirRawButton.Name = "LauncherExploreDevDirRawButton";
+			this.LauncherExploreDevDirRawButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreDevDirRawButton.TabIndex = 19;
+			this.LauncherExploreDevDirRawButton.Text = "Raw";
+			this.LauncherExploreDevDirRawButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreDevDirRawButton.Click += new System.EventHandler(this.LauncherExploreDevDirRawButton_Click);
 			// 
 			// LauncherExploreDevDirModelExportButton
 			// 
-			LauncherExploreDevDirModelExportButton.Location = new System.Drawing.Point(6, 78);
-			LauncherExploreDevDirModelExportButton.Name = "LauncherExploreDevDirModelExportButton";
-			LauncherExploreDevDirModelExportButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreDevDirModelExportButton.TabIndex = 18;
-			LauncherExploreDevDirModelExportButton.Text = "Model Export";
-			LauncherExploreDevDirModelExportButton.UseVisualStyleBackColor = true;
-			LauncherExploreDevDirModelExportButton.Click += new System.EventHandler(LauncherExploreDevDirModelExportButton_Click);
+			this.LauncherExploreDevDirModelExportButton.Location = new System.Drawing.Point(6, 78);
+			this.LauncherExploreDevDirModelExportButton.Name = "LauncherExploreDevDirModelExportButton";
+			this.LauncherExploreDevDirModelExportButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreDevDirModelExportButton.TabIndex = 18;
+			this.LauncherExploreDevDirModelExportButton.Text = "Model Export";
+			this.LauncherExploreDevDirModelExportButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreDevDirModelExportButton.Click += new System.EventHandler(this.LauncherExploreDevDirModelExportButton_Click);
 			// 
 			// LauncherExploreDevDirTextureAssetsButton
 			// 
-			LauncherExploreDevDirTextureAssetsButton.Location = new System.Drawing.Point(6, 168);
-			LauncherExploreDevDirTextureAssetsButton.Name = "LauncherExploreDevDirTextureAssetsButton";
-			LauncherExploreDevDirTextureAssetsButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreDevDirTextureAssetsButton.TabIndex = 17;
-			LauncherExploreDevDirTextureAssetsButton.Text = "Texture Assets";
-			LauncherExploreDevDirTextureAssetsButton.UseVisualStyleBackColor = true;
-			LauncherExploreDevDirTextureAssetsButton.Click += new System.EventHandler(LauncherExploreDevDirTextureAssetsButton_Click);
+			this.LauncherExploreDevDirTextureAssetsButton.Location = new System.Drawing.Point(6, 168);
+			this.LauncherExploreDevDirTextureAssetsButton.Name = "LauncherExploreDevDirTextureAssetsButton";
+			this.LauncherExploreDevDirTextureAssetsButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreDevDirTextureAssetsButton.TabIndex = 17;
+			this.LauncherExploreDevDirTextureAssetsButton.Text = "Texture Assets";
+			this.LauncherExploreDevDirTextureAssetsButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreDevDirTextureAssetsButton.Click += new System.EventHandler(this.LauncherExploreDevDirTextureAssetsButton_Click);
 			// 
 			// LauncherExploreDevDirSrcDataButton
 			// 
-			LauncherExploreDevDirSrcDataButton.Location = new System.Drawing.Point(6, 138);
-			LauncherExploreDevDirSrcDataButton.Name = "LauncherExploreDevDirSrcDataButton";
-			LauncherExploreDevDirSrcDataButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreDevDirSrcDataButton.TabIndex = 16;
-			LauncherExploreDevDirSrcDataButton.Text = "Source Data";
-			LauncherExploreDevDirSrcDataButton.UseVisualStyleBackColor = true;
-			LauncherExploreDevDirSrcDataButton.Click += new System.EventHandler(LauncherExploreDevDirSrcDataButton_Click);
+			this.LauncherExploreDevDirSrcDataButton.Location = new System.Drawing.Point(6, 138);
+			this.LauncherExploreDevDirSrcDataButton.Name = "LauncherExploreDevDirSrcDataButton";
+			this.LauncherExploreDevDirSrcDataButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreDevDirSrcDataButton.TabIndex = 16;
+			this.LauncherExploreDevDirSrcDataButton.Text = "Source Data";
+			this.LauncherExploreDevDirSrcDataButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreDevDirSrcDataButton.Click += new System.EventHandler(this.LauncherExploreDevDirSrcDataButton_Click);
 			// 
 			// LauncherExploreDevDirMapSrcButton
 			// 
-			LauncherExploreDevDirMapSrcButton.Location = new System.Drawing.Point(6, 48);
-			LauncherExploreDevDirMapSrcButton.Name = "LauncherExploreDevDirMapSrcButton";
-			LauncherExploreDevDirMapSrcButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreDevDirMapSrcButton.TabIndex = 15;
-			LauncherExploreDevDirMapSrcButton.Text = "Map Source";
-			LauncherExploreDevDirMapSrcButton.UseVisualStyleBackColor = true;
-			LauncherExploreDevDirMapSrcButton.Click += new System.EventHandler(LauncherExploreDevDirMapSrcButton_Click);
+			this.LauncherExploreDevDirMapSrcButton.Location = new System.Drawing.Point(6, 48);
+			this.LauncherExploreDevDirMapSrcButton.Name = "LauncherExploreDevDirMapSrcButton";
+			this.LauncherExploreDevDirMapSrcButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreDevDirMapSrcButton.TabIndex = 15;
+			this.LauncherExploreDevDirMapSrcButton.Text = "Map Source";
+			this.LauncherExploreDevDirMapSrcButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreDevDirMapSrcButton.Click += new System.EventHandler(this.LauncherExploreDevDirMapSrcButton_Click);
 			// 
 			// LauncherExploreDevDirBinButton
 			// 
-			LauncherExploreDevDirBinButton.Location = new System.Drawing.Point(6, 19);
-			LauncherExploreDevDirBinButton.Name = "LauncherExploreDevDirBinButton";
-			LauncherExploreDevDirBinButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreDevDirBinButton.TabIndex = 14;
-			LauncherExploreDevDirBinButton.Text = "Bin";
-			LauncherExploreDevDirBinButton.UseVisualStyleBackColor = true;
-			LauncherExploreDevDirBinButton.Click += new System.EventHandler(LauncherExploreDevDirBinButton_Click);
+			this.LauncherExploreDevDirBinButton.Location = new System.Drawing.Point(6, 19);
+			this.LauncherExploreDevDirBinButton.Name = "LauncherExploreDevDirBinButton";
+			this.LauncherExploreDevDirBinButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreDevDirBinButton.TabIndex = 14;
+			this.LauncherExploreDevDirBinButton.Text = "Bin";
+			this.LauncherExploreDevDirBinButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreDevDirBinButton.Click += new System.EventHandler(this.LauncherExploreDevDirBinButton_Click);
 			// 
 			// LauncherExploreDevDirZoneSourceButton
 			// 
-			LauncherExploreDevDirZoneSourceButton.Location = new System.Drawing.Point(6, 198);
-			LauncherExploreDevDirZoneSourceButton.Name = "LauncherExploreDevDirZoneSourceButton";
-			LauncherExploreDevDirZoneSourceButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreDevDirZoneSourceButton.TabIndex = 13;
-			LauncherExploreDevDirZoneSourceButton.Text = "Zone Source";
-			LauncherExploreDevDirZoneSourceButton.UseVisualStyleBackColor = true;
-			LauncherExploreDevDirZoneSourceButton.Click += new System.EventHandler(LauncherExploreDevDirZoneSourceButton_Click);
+			this.LauncherExploreDevDirZoneSourceButton.Location = new System.Drawing.Point(6, 198);
+			this.LauncherExploreDevDirZoneSourceButton.Name = "LauncherExploreDevDirZoneSourceButton";
+			this.LauncherExploreDevDirZoneSourceButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreDevDirZoneSourceButton.TabIndex = 13;
+			this.LauncherExploreDevDirZoneSourceButton.Text = "Zone Source";
+			this.LauncherExploreDevDirZoneSourceButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreDevDirZoneSourceButton.Click += new System.EventHandler(this.LauncherExploreDevDirZoneSourceButton_Click);
 			// 
 			// LauncherExploreBlopsDirGroupBox
 			// 
-			LauncherExploreBlopsDirGroupBox.Controls.Add(LauncherExploreBlopsDirConfigsButton);
-			LauncherExploreBlopsDirGroupBox.Controls.Add(LauncherExploreBlopsDirModsButton);
-			LauncherExploreBlopsDirGroupBox.Controls.Add(LauncherExploreBlopsDirGameButton);
-			LauncherExploreBlopsDirGroupBox.Location = new System.Drawing.Point(19, 19);
-			LauncherExploreBlopsDirGroupBox.Name = "LauncherExploreBlopsDirGroupBox";
-			LauncherExploreBlopsDirGroupBox.Size = new System.Drawing.Size(142, 110);
-			LauncherExploreBlopsDirGroupBox.TabIndex = 17;
-			LauncherExploreBlopsDirGroupBox.TabStop = false;
-			LauncherExploreBlopsDirGroupBox.Text = "Call of Duty: Black Ops";
+			this.LauncherExploreBlopsDirGroupBox.Controls.Add(this.LauncherExploreBlopsDirConfigsButton);
+			this.LauncherExploreBlopsDirGroupBox.Controls.Add(this.LauncherExploreBlopsDirModsButton);
+			this.LauncherExploreBlopsDirGroupBox.Controls.Add(this.LauncherExploreBlopsDirGameButton);
+			this.LauncherExploreBlopsDirGroupBox.Location = new System.Drawing.Point(19, 19);
+			this.LauncherExploreBlopsDirGroupBox.Name = "LauncherExploreBlopsDirGroupBox";
+			this.LauncherExploreBlopsDirGroupBox.Size = new System.Drawing.Size(142, 110);
+			this.LauncherExploreBlopsDirGroupBox.TabIndex = 17;
+			this.LauncherExploreBlopsDirGroupBox.TabStop = false;
+			this.LauncherExploreBlopsDirGroupBox.Text = "Call of Duty: Black Ops";
 			// 
 			// LauncherExploreBlopsDirConfigsButton
 			// 
-			LauncherExploreBlopsDirConfigsButton.Location = new System.Drawing.Point(6, 49);
-			LauncherExploreBlopsDirConfigsButton.Name = "LauncherExploreBlopsDirConfigsButton";
-			LauncherExploreBlopsDirConfigsButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreBlopsDirConfigsButton.TabIndex = 10;
-			LauncherExploreBlopsDirConfigsButton.Text = "Player Configs";
-			LauncherExploreBlopsDirConfigsButton.UseVisualStyleBackColor = true;
-			LauncherExploreBlopsDirConfigsButton.Click += new System.EventHandler(LauncherExploreBlopsDirConfigsButton_Click);
+			this.LauncherExploreBlopsDirConfigsButton.Location = new System.Drawing.Point(6, 49);
+			this.LauncherExploreBlopsDirConfigsButton.Name = "LauncherExploreBlopsDirConfigsButton";
+			this.LauncherExploreBlopsDirConfigsButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreBlopsDirConfigsButton.TabIndex = 10;
+			this.LauncherExploreBlopsDirConfigsButton.Text = "Player Configs";
+			this.LauncherExploreBlopsDirConfigsButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreBlopsDirConfigsButton.Click += new System.EventHandler(this.LauncherExploreBlopsDirConfigsButton_Click);
 			// 
 			// LauncherExploreBlopsDirModsButton
 			// 
-			LauncherExploreBlopsDirModsButton.Location = new System.Drawing.Point(6, 79);
-			LauncherExploreBlopsDirModsButton.Name = "LauncherExploreBlopsDirModsButton";
-			LauncherExploreBlopsDirModsButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreBlopsDirModsButton.TabIndex = 9;
-			LauncherExploreBlopsDirModsButton.Text = "Mods Folder";
-			LauncherExploreBlopsDirModsButton.UseVisualStyleBackColor = true;
-			LauncherExploreBlopsDirModsButton.Click += new System.EventHandler(LauncherExploreBlopsDirModsButton_Click);
+			this.LauncherExploreBlopsDirModsButton.Location = new System.Drawing.Point(6, 79);
+			this.LauncherExploreBlopsDirModsButton.Name = "LauncherExploreBlopsDirModsButton";
+			this.LauncherExploreBlopsDirModsButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreBlopsDirModsButton.TabIndex = 9;
+			this.LauncherExploreBlopsDirModsButton.Text = "Mods Folder";
+			this.LauncherExploreBlopsDirModsButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreBlopsDirModsButton.Click += new System.EventHandler(this.LauncherExploreBlopsDirModsButton_Click);
 			// 
 			// LauncherExploreBlopsDirGameButton
 			// 
-			LauncherExploreBlopsDirGameButton.Location = new System.Drawing.Point(6, 19);
-			LauncherExploreBlopsDirGameButton.Name = "LauncherExploreBlopsDirGameButton";
-			LauncherExploreBlopsDirGameButton.Size = new System.Drawing.Size(128, 24);
-			LauncherExploreBlopsDirGameButton.TabIndex = 8;
-			LauncherExploreBlopsDirGameButton.Text = "Game Directory";
-			LauncherExploreBlopsDirGameButton.UseVisualStyleBackColor = true;
-			LauncherExploreBlopsDirGameButton.Click += new System.EventHandler(LauncherExploreBlopsDirGameButton_Click);
+			this.LauncherExploreBlopsDirGameButton.Location = new System.Drawing.Point(6, 19);
+			this.LauncherExploreBlopsDirGameButton.Name = "LauncherExploreBlopsDirGameButton";
+			this.LauncherExploreBlopsDirGameButton.Size = new System.Drawing.Size(128, 24);
+			this.LauncherExploreBlopsDirGameButton.TabIndex = 8;
+			this.LauncherExploreBlopsDirGameButton.Text = "Game Directory";
+			this.LauncherExploreBlopsDirGameButton.UseVisualStyleBackColor = true;
+			this.LauncherExploreBlopsDirGameButton.Click += new System.EventHandler(this.LauncherExploreBlopsDirGameButton_Click);
 			// 
 			// LauncherApplicationsGroupBox
 			// 
-			LauncherApplicationsGroupBox.Controls.Add(LauncherIconRadiant);
-			LauncherApplicationsGroupBox.Controls.Add(LauncherIconEffectsEditor);
-			LauncherApplicationsGroupBox.Controls.Add(LauncherIconConverter);
-			LauncherApplicationsGroupBox.Controls.Add(LauncherIconAssetViewer);
-			LauncherApplicationsGroupBox.Controls.Add(LauncherIconAssetManager);
-			LauncherApplicationsGroupBox.Controls.Add(LauncherButtonAssetViewer);
-			LauncherApplicationsGroupBox.Controls.Add(LauncherButtonRunConverter);
-			LauncherApplicationsGroupBox.Controls.Add(LauncherButtonAssetManager);
-			LauncherApplicationsGroupBox.Controls.Add(LauncherButtonEffectsEd);
-			LauncherApplicationsGroupBox.Controls.Add(LauncherButtonRadiant);
-			LauncherApplicationsGroupBox.Location = new System.Drawing.Point(5, 186);
-			LauncherApplicationsGroupBox.Name = "LauncherApplicationsGroupBox";
-			LauncherApplicationsGroupBox.Size = new System.Drawing.Size(139, 165);
-			LauncherApplicationsGroupBox.TabIndex = 8;
-			LauncherApplicationsGroupBox.TabStop = false;
-			LauncherApplicationsGroupBox.Text = "Tools";
+			this.LauncherApplicationsGroupBox.Controls.Add(this.LauncherIconRadiant);
+			this.LauncherApplicationsGroupBox.Controls.Add(this.LauncherIconEffectsEditor);
+			this.LauncherApplicationsGroupBox.Controls.Add(this.LauncherIconConverter);
+			this.LauncherApplicationsGroupBox.Controls.Add(this.LauncherIconAssetViewer);
+			this.LauncherApplicationsGroupBox.Controls.Add(this.LauncherIconAssetManager);
+			this.LauncherApplicationsGroupBox.Controls.Add(this.LauncherButtonAssetViewer);
+			this.LauncherApplicationsGroupBox.Controls.Add(this.LauncherButtonRunConverter);
+			this.LauncherApplicationsGroupBox.Controls.Add(this.LauncherButtonAssetManager);
+			this.LauncherApplicationsGroupBox.Controls.Add(this.LauncherButtonEffectsEd);
+			this.LauncherApplicationsGroupBox.Controls.Add(this.LauncherButtonRadiant);
+			this.LauncherApplicationsGroupBox.Location = new System.Drawing.Point(5, 186);
+			this.LauncherApplicationsGroupBox.Name = "LauncherApplicationsGroupBox";
+			this.LauncherApplicationsGroupBox.Size = new System.Drawing.Size(139, 165);
+			this.LauncherApplicationsGroupBox.TabIndex = 8;
+			this.LauncherApplicationsGroupBox.TabStop = false;
+			this.LauncherApplicationsGroupBox.Text = "Tools";
 			// 
 			// LauncherIconRadiant
 			// 
-			LauncherIconRadiant.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconRadiant.BackgroundImage")));
-			LauncherIconRadiant.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-			LauncherIconRadiant.Enabled = false;
-			LauncherIconRadiant.Location = new System.Drawing.Point(13, 139);
-			LauncherIconRadiant.Name = "LauncherIconRadiant";
-			LauncherIconRadiant.Size = new System.Drawing.Size(16, 16);
-			LauncherIconRadiant.TabIndex = 10;
-			LauncherIconRadiant.TabStop = false;
+			this.LauncherIconRadiant.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconRadiant.BackgroundImage")));
+			this.LauncherIconRadiant.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+			this.LauncherIconRadiant.Enabled = false;
+			this.LauncherIconRadiant.Location = new System.Drawing.Point(13, 139);
+			this.LauncherIconRadiant.Name = "LauncherIconRadiant";
+			this.LauncherIconRadiant.Size = new System.Drawing.Size(16, 16);
+			this.LauncherIconRadiant.TabIndex = 10;
+			this.LauncherIconRadiant.TabStop = false;
 			// 
 			// LauncherIconEffectsEditor
 			// 
-			LauncherIconEffectsEditor.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconEffectsEditor.BackgroundImage")));
-			LauncherIconEffectsEditor.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-			LauncherIconEffectsEditor.Enabled = false;
-			LauncherIconEffectsEditor.Location = new System.Drawing.Point(12, 18);
-			LauncherIconEffectsEditor.Name = "LauncherIconEffectsEditor";
-			LauncherIconEffectsEditor.Size = new System.Drawing.Size(16, 16);
-			LauncherIconEffectsEditor.TabIndex = 9;
-			LauncherIconEffectsEditor.TabStop = false;
+			this.LauncherIconEffectsEditor.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconEffectsEditor.BackgroundImage")));
+			this.LauncherIconEffectsEditor.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+			this.LauncherIconEffectsEditor.Enabled = false;
+			this.LauncherIconEffectsEditor.Location = new System.Drawing.Point(12, 18);
+			this.LauncherIconEffectsEditor.Name = "LauncherIconEffectsEditor";
+			this.LauncherIconEffectsEditor.Size = new System.Drawing.Size(16, 16);
+			this.LauncherIconEffectsEditor.TabIndex = 9;
+			this.LauncherIconEffectsEditor.TabStop = false;
 			// 
 			// LauncherIconConverter
 			// 
-			LauncherIconConverter.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconConverter.BackgroundImage")));
-			LauncherIconConverter.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-			LauncherIconConverter.Enabled = false;
-			LauncherIconConverter.Location = new System.Drawing.Point(12, 109);
-			LauncherIconConverter.Name = "LauncherIconConverter";
-			LauncherIconConverter.Size = new System.Drawing.Size(16, 16);
-			LauncherIconConverter.TabIndex = 8;
-			LauncherIconConverter.TabStop = false;
+			this.LauncherIconConverter.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconConverter.BackgroundImage")));
+			this.LauncherIconConverter.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+			this.LauncherIconConverter.Enabled = false;
+			this.LauncherIconConverter.Location = new System.Drawing.Point(12, 109);
+			this.LauncherIconConverter.Name = "LauncherIconConverter";
+			this.LauncherIconConverter.Size = new System.Drawing.Size(16, 16);
+			this.LauncherIconConverter.TabIndex = 8;
+			this.LauncherIconConverter.TabStop = false;
 			// 
 			// LauncherIconAssetViewer
 			// 
-			LauncherIconAssetViewer.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconAssetViewer.BackgroundImage")));
-			LauncherIconAssetViewer.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-			LauncherIconAssetViewer.Enabled = false;
-			LauncherIconAssetViewer.Location = new System.Drawing.Point(12, 78);
-			LauncherIconAssetViewer.Name = "LauncherIconAssetViewer";
-			LauncherIconAssetViewer.Size = new System.Drawing.Size(16, 16);
-			LauncherIconAssetViewer.TabIndex = 7;
-			LauncherIconAssetViewer.TabStop = false;
+			this.LauncherIconAssetViewer.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherIconAssetViewer.BackgroundImage")));
+			this.LauncherIconAssetViewer.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+			this.LauncherIconAssetViewer.Enabled = false;
+			this.LauncherIconAssetViewer.Location = new System.Drawing.Point(12, 78);
+			this.LauncherIconAssetViewer.Name = "LauncherIconAssetViewer";
+			this.LauncherIconAssetViewer.Size = new System.Drawing.Size(16, 16);
+			this.LauncherIconAssetViewer.TabIndex = 7;
+			this.LauncherIconAssetViewer.TabStop = false;
 			// 
 			// LauncherIconAssetManager
 			// 
-			LauncherIconAssetManager.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-			LauncherIconAssetManager.Enabled = false;
-			LauncherIconAssetManager.Image = ((System.Drawing.Image)(resources.GetObject("LauncherIconAssetManager.Image")));
-			LauncherIconAssetManager.Location = new System.Drawing.Point(12, 48);
-			LauncherIconAssetManager.Name = "LauncherIconAssetManager";
-			LauncherIconAssetManager.Size = new System.Drawing.Size(16, 16);
-			LauncherIconAssetManager.TabIndex = 6;
-			LauncherIconAssetManager.TabStop = false;
+			this.LauncherIconAssetManager.BackgroundImage = global::Launcher.Properties.Resources.asset_manager;
+			this.LauncherIconAssetManager.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+			this.LauncherIconAssetManager.Enabled = false;
+			this.LauncherIconAssetManager.Location = new System.Drawing.Point(12, 48);
+			this.LauncherIconAssetManager.Name = "LauncherIconAssetManager";
+			this.LauncherIconAssetManager.Size = new System.Drawing.Size(16, 16);
+			this.LauncherIconAssetManager.TabIndex = 6;
+			this.LauncherIconAssetManager.TabStop = false;
 			// 
 			// LauncherButtonAssetViewer
 			// 
-			LauncherButtonAssetViewer.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.LauncherButtonAssetViewer.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherButtonAssetViewer.Location = new System.Drawing.Point(8, 74);
-			LauncherButtonAssetViewer.Name = "LauncherButtonAssetViewer";
-			LauncherButtonAssetViewer.Size = new System.Drawing.Size(128, 24);
-			LauncherButtonAssetViewer.TabIndex = 5;
-			LauncherButtonAssetViewer.Text = "     Asset Viewer";
-			LauncherButtonAssetViewer.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			LauncherAssetViewerToolTip.SetToolTip(LauncherButtonAssetViewer, "View converted models");
-			LauncherButtonAssetViewer.UseVisualStyleBackColor = true;
-			LauncherButtonAssetViewer.Click += new System.EventHandler(LauncherButtonAssetViewer_Click);
+			this.LauncherButtonAssetViewer.Location = new System.Drawing.Point(8, 74);
+			this.LauncherButtonAssetViewer.Name = "LauncherButtonAssetViewer";
+			this.LauncherButtonAssetViewer.Size = new System.Drawing.Size(128, 24);
+			this.LauncherButtonAssetViewer.TabIndex = 5;
+			this.LauncherButtonAssetViewer.Text = "     Asset Viewer";
+			this.LauncherButtonAssetViewer.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.LauncherAssetViewerToolTip.SetToolTip(this.LauncherButtonAssetViewer, "View converted models");
+			this.LauncherButtonAssetViewer.UseVisualStyleBackColor = true;
+			this.LauncherButtonAssetViewer.Click += new System.EventHandler(this.LauncherButtonAssetViewer_Click);
 			// 
 			// LauncherButtonRunConverter
 			// 
-			LauncherButtonRunConverter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.LauncherButtonRunConverter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherButtonRunConverter.Location = new System.Drawing.Point(8, 105);
-			LauncherButtonRunConverter.Name = "LauncherButtonRunConverter";
-			LauncherButtonRunConverter.Size = new System.Drawing.Size(128, 24);
-			LauncherButtonRunConverter.TabIndex = 3;
-			LauncherButtonRunConverter.Text = "     Converter";
-			LauncherButtonRunConverter.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			LauncherConverterToolTip.SetToolTip(LauncherButtonRunConverter, "Convert .GDTs to game data");
-			LauncherButtonRunConverter.UseVisualStyleBackColor = true;
-			LauncherButtonRunConverter.Click += new System.EventHandler(LauncherButtonRunConverter_Click);
+			this.LauncherButtonRunConverter.Location = new System.Drawing.Point(8, 105);
+			this.LauncherButtonRunConverter.Name = "LauncherButtonRunConverter";
+			this.LauncherButtonRunConverter.Size = new System.Drawing.Size(128, 24);
+			this.LauncherButtonRunConverter.TabIndex = 3;
+			this.LauncherButtonRunConverter.Text = "     Converter";
+			this.LauncherButtonRunConverter.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.LauncherConverterToolTip.SetToolTip(this.LauncherButtonRunConverter, "Convert .GDTs to game data");
+			this.LauncherButtonRunConverter.UseVisualStyleBackColor = true;
+			this.LauncherButtonRunConverter.Click += new System.EventHandler(this.LauncherButtonRunConverter_Click);
 			// 
 			// LauncherButtonAssetManager
 			// 
-			LauncherButtonAssetManager.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.LauncherButtonAssetManager.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherButtonAssetManager.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			LauncherButtonAssetManager.Location = new System.Drawing.Point(8, 44);
-			LauncherButtonAssetManager.Name = "LauncherButtonAssetManager";
-			LauncherButtonAssetManager.Size = new System.Drawing.Size(128, 24);
-			LauncherButtonAssetManager.TabIndex = 2;
-			LauncherButtonAssetManager.Text = "     Asset Manager";
-			LauncherButtonAssetManager.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			LauncherAssetManagerToolTip.SetToolTip(LauncherButtonAssetManager, "Manage .GDT files");
-			LauncherButtonAssetManager.UseVisualStyleBackColor = true;
-			LauncherButtonAssetManager.Click += new System.EventHandler(LauncherButtonAssetManager_Click);
+			this.LauncherButtonAssetManager.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.LauncherButtonAssetManager.Location = new System.Drawing.Point(8, 44);
+			this.LauncherButtonAssetManager.Name = "LauncherButtonAssetManager";
+			this.LauncherButtonAssetManager.Size = new System.Drawing.Size(128, 24);
+			this.LauncherButtonAssetManager.TabIndex = 2;
+			this.LauncherButtonAssetManager.Text = "     Asset Manager";
+			this.LauncherButtonAssetManager.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.LauncherAssetManagerToolTip.SetToolTip(this.LauncherButtonAssetManager, "Manage .GDT files");
+			this.LauncherButtonAssetManager.UseVisualStyleBackColor = true;
+			this.LauncherButtonAssetManager.Click += new System.EventHandler(this.LauncherButtonAssetManager_Click);
 			// 
 			// LauncherButtonEffectsEd
 			// 
-			LauncherButtonEffectsEd.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.LauncherButtonEffectsEd.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherButtonEffectsEd.Location = new System.Drawing.Point(7, 14);
-			LauncherButtonEffectsEd.Name = "LauncherButtonEffectsEd";
-			LauncherButtonEffectsEd.Size = new System.Drawing.Size(128, 24);
-			LauncherButtonEffectsEd.TabIndex = 1;
-			LauncherButtonEffectsEd.Text = "     Effects Editor";
-			LauncherButtonEffectsEd.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			LauncherEffectsEdToolTip.SetToolTip(LauncherButtonEffectsEd, "Effects Editor");
-			LauncherButtonEffectsEd.UseVisualStyleBackColor = true;
-			LauncherButtonEffectsEd.Click += new System.EventHandler(LauncherButtonEffectsEd_Click);
+			this.LauncherButtonEffectsEd.Location = new System.Drawing.Point(7, 14);
+			this.LauncherButtonEffectsEd.Name = "LauncherButtonEffectsEd";
+			this.LauncherButtonEffectsEd.Size = new System.Drawing.Size(128, 24);
+			this.LauncherButtonEffectsEd.TabIndex = 1;
+			this.LauncherButtonEffectsEd.Text = "     Effects Editor";
+			this.LauncherButtonEffectsEd.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.LauncherEffectsEdToolTip.SetToolTip(this.LauncherButtonEffectsEd, "Effects Editor");
+			this.LauncherButtonEffectsEd.UseVisualStyleBackColor = true;
+			this.LauncherButtonEffectsEd.Click += new System.EventHandler(this.LauncherButtonEffectsEd_Click);
 			// 
 			// LauncherButtonRadiant
 			// 
-			LauncherButtonRadiant.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.LauncherButtonRadiant.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherButtonRadiant.Location = new System.Drawing.Point(8, 135);
-			LauncherButtonRadiant.Name = "LauncherButtonRadiant";
-			LauncherButtonRadiant.Size = new System.Drawing.Size(128, 24);
-			LauncherButtonRadiant.TabIndex = 0;
-			LauncherButtonRadiant.Text = "     Radiant";
-			LauncherButtonRadiant.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			LauncherRadiantToolTip.SetToolTip(LauncherButtonRadiant, "Open Radiant, the level editor");
-			LauncherButtonRadiant.UseVisualStyleBackColor = true;
-			LauncherButtonRadiant.Click += new System.EventHandler(LauncherButtonRadiant_Click);
+			this.LauncherButtonRadiant.Location = new System.Drawing.Point(8, 135);
+			this.LauncherButtonRadiant.Name = "LauncherButtonRadiant";
+			this.LauncherButtonRadiant.Size = new System.Drawing.Size(128, 24);
+			this.LauncherButtonRadiant.TabIndex = 0;
+			this.LauncherButtonRadiant.Text = "     Radiant";
+			this.LauncherButtonRadiant.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.LauncherRadiantToolTip.SetToolTip(this.LauncherButtonRadiant, "Open Radiant, the level editor");
+			this.LauncherButtonRadiant.UseVisualStyleBackColor = true;
+			this.LauncherButtonRadiant.Click += new System.EventHandler(this.LauncherButtonRadiant_Click);
 			// 
 			// LauncherWarningsCounter
 			// 
-			LauncherWarningsCounter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherWarningsCounter.Location = new System.Drawing.Point(550, 249);
-			LauncherWarningsCounter.Name = "LauncherWarningsCounter";
-			LauncherWarningsCounter.Size = new System.Drawing.Size(31, 13);
-			LauncherWarningsCounter.TabIndex = 25;
-			LauncherWarningsCounter.Text = "0";
-			LauncherWarningsCounter.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			this.LauncherWarningsCounter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherWarningsCounter.Location = new System.Drawing.Point(550, 249);
+			this.LauncherWarningsCounter.Name = "LauncherWarningsCounter";
+			this.LauncherWarningsCounter.Size = new System.Drawing.Size(31, 13);
+			this.LauncherWarningsCounter.TabIndex = 25;
+			this.LauncherWarningsCounter.Text = "0";
+			this.LauncherWarningsCounter.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// LauncherWarningsNumericUpDown
 			// 
-			LauncherWarningsNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherWarningsNumericUpDown.Location = new System.Drawing.Point(655, 246);
-			LauncherWarningsNumericUpDown.Maximum = new decimal(new int[] {
+			this.LauncherWarningsNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherWarningsNumericUpDown.Location = new System.Drawing.Point(655, 246);
+			this.LauncherWarningsNumericUpDown.Maximum = new decimal(new int[] {
             1,
             0,
             0,
             0});
-			LauncherWarningsNumericUpDown.Name = "LauncherWarningsNumericUpDown";
-			LauncherWarningsNumericUpDown.ReadOnly = true;
-			LauncherWarningsNumericUpDown.Size = new System.Drawing.Size(18, 20);
-			LauncherWarningsNumericUpDown.TabIndex = 24;
-			LauncherWarningsNumericUpDown.Visible = false;
-			LauncherWarningsNumericUpDown.ValueChanged += new System.EventHandler(LauncherWarningsNumericUpDown_ValueChanged);
+			this.LauncherWarningsNumericUpDown.Name = "LauncherWarningsNumericUpDown";
+			this.LauncherWarningsNumericUpDown.ReadOnly = true;
+			this.LauncherWarningsNumericUpDown.Size = new System.Drawing.Size(18, 20);
+			this.LauncherWarningsNumericUpDown.TabIndex = 24;
+			this.LauncherWarningsNumericUpDown.Visible = false;
+			this.LauncherWarningsNumericUpDown.ValueChanged += new System.EventHandler(this.LauncherWarningsNumericUpDown_ValueChanged);
 			// 
 			// LauncherWarningsPictureBox
 			// 
-			LauncherWarningsPictureBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherWarningsPictureBox.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherWarningsPictureBox.BackgroundImage")));
-			LauncherWarningsPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-			LauncherWarningsPictureBox.Location = new System.Drawing.Point(635, 248);
-			LauncherWarningsPictureBox.Name = "LauncherWarningsPictureBox";
-			LauncherWarningsPictureBox.Size = new System.Drawing.Size(16, 16);
-			LauncherWarningsPictureBox.TabIndex = 23;
-			LauncherWarningsPictureBox.TabStop = false;
+			this.LauncherWarningsPictureBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherWarningsPictureBox.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherWarningsPictureBox.BackgroundImage")));
+			this.LauncherWarningsPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+			this.LauncherWarningsPictureBox.Location = new System.Drawing.Point(635, 248);
+			this.LauncherWarningsPictureBox.Name = "LauncherWarningsPictureBox";
+			this.LauncherWarningsPictureBox.Size = new System.Drawing.Size(16, 16);
+			this.LauncherWarningsPictureBox.TabIndex = 23;
+			this.LauncherWarningsPictureBox.TabStop = false;
 			// 
 			// LauncherWarningsLabel
 			// 
-			LauncherWarningsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherWarningsLabel.AutoSize = true;
-			LauncherWarningsLabel.Location = new System.Drawing.Point(580, 249);
-			LauncherWarningsLabel.Name = "LauncherWarningsLabel";
-			LauncherWarningsLabel.Size = new System.Drawing.Size(52, 13);
-			LauncherWarningsLabel.TabIndex = 22;
-			LauncherWarningsLabel.Text = "Warnings";
-			LauncherWarningsLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			this.LauncherWarningsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherWarningsLabel.AutoSize = true;
+			this.LauncherWarningsLabel.Location = new System.Drawing.Point(580, 249);
+			this.LauncherWarningsLabel.Name = "LauncherWarningsLabel";
+			this.LauncherWarningsLabel.Size = new System.Drawing.Size(52, 13);
+			this.LauncherWarningsLabel.TabIndex = 22;
+			this.LauncherWarningsLabel.Text = "Warnings";
+			this.LauncherWarningsLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// LauncherErrorsCounter
 			// 
-			LauncherErrorsCounter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherErrorsCounter.Location = new System.Drawing.Point(679, 249);
-			LauncherErrorsCounter.Name = "LauncherErrorsCounter";
-			LauncherErrorsCounter.Size = new System.Drawing.Size(35, 13);
-			LauncherErrorsCounter.TabIndex = 21;
-			LauncherErrorsCounter.Text = "0";
-			LauncherErrorsCounter.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			this.LauncherErrorsCounter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherErrorsCounter.Location = new System.Drawing.Point(679, 249);
+			this.LauncherErrorsCounter.Name = "LauncherErrorsCounter";
+			this.LauncherErrorsCounter.Size = new System.Drawing.Size(35, 13);
+			this.LauncherErrorsCounter.TabIndex = 21;
+			this.LauncherErrorsCounter.Text = "0";
+			this.LauncherErrorsCounter.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// LauncherErrorsNumericUpDown
 			// 
-			LauncherErrorsNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherErrorsNumericUpDown.Location = new System.Drawing.Point(770, 246);
-			LauncherErrorsNumericUpDown.Maximum = new decimal(new int[] {
+			this.LauncherErrorsNumericUpDown.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherErrorsNumericUpDown.Location = new System.Drawing.Point(770, 246);
+			this.LauncherErrorsNumericUpDown.Maximum = new decimal(new int[] {
             1,
             0,
             0,
             0});
-			LauncherErrorsNumericUpDown.Name = "LauncherErrorsNumericUpDown";
-			LauncherErrorsNumericUpDown.ReadOnly = true;
-			LauncherErrorsNumericUpDown.Size = new System.Drawing.Size(18, 20);
-			LauncherErrorsNumericUpDown.TabIndex = 20;
-			LauncherErrorsNumericUpDown.Visible = false;
-			LauncherErrorsNumericUpDown.ValueChanged += new System.EventHandler(LauncherErrorsNumericUpDown_ValueChanged);
+			this.LauncherErrorsNumericUpDown.Name = "LauncherErrorsNumericUpDown";
+			this.LauncherErrorsNumericUpDown.ReadOnly = true;
+			this.LauncherErrorsNumericUpDown.Size = new System.Drawing.Size(18, 20);
+			this.LauncherErrorsNumericUpDown.TabIndex = 20;
+			this.LauncherErrorsNumericUpDown.Visible = false;
+			this.LauncherErrorsNumericUpDown.ValueChanged += new System.EventHandler(this.LauncherErrorsNumericUpDown_ValueChanged);
 			// 
 			// LauncherErrorsPictureBox
 			// 
-			LauncherErrorsPictureBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherErrorsPictureBox.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherErrorsPictureBox.BackgroundImage")));
-			LauncherErrorsPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
-			LauncherErrorsPictureBox.Location = new System.Drawing.Point(750, 248);
-			LauncherErrorsPictureBox.Name = "LauncherErrorsPictureBox";
-			LauncherErrorsPictureBox.Size = new System.Drawing.Size(16, 16);
-			LauncherErrorsPictureBox.TabIndex = 19;
-			LauncherErrorsPictureBox.TabStop = false;
+			this.LauncherErrorsPictureBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherErrorsPictureBox.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("LauncherErrorsPictureBox.BackgroundImage")));
+			this.LauncherErrorsPictureBox.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
+			this.LauncherErrorsPictureBox.Location = new System.Drawing.Point(750, 248);
+			this.LauncherErrorsPictureBox.Name = "LauncherErrorsPictureBox";
+			this.LauncherErrorsPictureBox.Size = new System.Drawing.Size(16, 16);
+			this.LauncherErrorsPictureBox.TabIndex = 19;
+			this.LauncherErrorsPictureBox.TabStop = false;
 			// 
 			// LauncherErrorsLabel
 			// 
-			LauncherErrorsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherErrorsLabel.AutoSize = true;
-			LauncherErrorsLabel.Location = new System.Drawing.Point(713, 249);
-			LauncherErrorsLabel.Name = "LauncherErrorsLabel";
-			LauncherErrorsLabel.Size = new System.Drawing.Size(34, 13);
-			LauncherErrorsLabel.TabIndex = 18;
-			LauncherErrorsLabel.Text = "Errors";
-			LauncherErrorsLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			this.LauncherErrorsLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherErrorsLabel.AutoSize = true;
+			this.LauncherErrorsLabel.Location = new System.Drawing.Point(713, 249);
+			this.LauncherErrorsLabel.Name = "LauncherErrorsLabel";
+			this.LauncherErrorsLabel.Size = new System.Drawing.Size(34, 13);
+			this.LauncherErrorsLabel.TabIndex = 18;
+			this.LauncherErrorsLabel.Text = "Errors";
+			this.LauncherErrorsLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// LauncherScrollBottomConsoleButton
 			// 
-			LauncherScrollBottomConsoleButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherScrollBottomConsoleButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
-			LauncherScrollBottomConsoleButton.Image = ((System.Drawing.Image)(resources.GetObject("LauncherScrollBottomConsoleButton.Image")));
-			LauncherScrollBottomConsoleButton.Location = new System.Drawing.Point(924, 244);
-			LauncherScrollBottomConsoleButton.Name = "LauncherScrollBottomConsoleButton";
-			LauncherScrollBottomConsoleButton.Size = new System.Drawing.Size(27, 23);
-			LauncherScrollBottomConsoleButton.TabIndex = 17;
-			LauncherScrollBottomConsoleToolTip.SetToolTip(LauncherScrollBottomConsoleButton, "Scroll to end");
-			LauncherScrollBottomConsoleButton.UseVisualStyleBackColor = true;
-			LauncherScrollBottomConsoleButton.Click += new System.EventHandler(LauncherScrollBottomConsoleButton_Click);
+			this.LauncherScrollBottomConsoleButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherScrollBottomConsoleButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+			this.LauncherScrollBottomConsoleButton.Image = ((System.Drawing.Image)(resources.GetObject("LauncherScrollBottomConsoleButton.Image")));
+			this.LauncherScrollBottomConsoleButton.Location = new System.Drawing.Point(924, 244);
+			this.LauncherScrollBottomConsoleButton.Name = "LauncherScrollBottomConsoleButton";
+			this.LauncherScrollBottomConsoleButton.Size = new System.Drawing.Size(27, 23);
+			this.LauncherScrollBottomConsoleButton.TabIndex = 17;
+			this.LauncherScrollBottomConsoleToolTip.SetToolTip(this.LauncherScrollBottomConsoleButton, "Scroll to end");
+			this.LauncherScrollBottomConsoleButton.UseVisualStyleBackColor = true;
+			this.LauncherScrollBottomConsoleButton.Click += new System.EventHandler(this.LauncherScrollBottomConsoleButton_Click);
 			// 
 			// LauncherSaveConsoleButton
 			// 
-			LauncherSaveConsoleButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherSaveConsoleButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
-			LauncherSaveConsoleButton.Image = ((System.Drawing.Image)(resources.GetObject("LauncherSaveConsoleButton.Image")));
-			LauncherSaveConsoleButton.Location = new System.Drawing.Point(794, 244);
-			LauncherSaveConsoleButton.Name = "LauncherSaveConsoleButton";
-			LauncherSaveConsoleButton.Size = new System.Drawing.Size(27, 23);
-			LauncherSaveConsoleButton.TabIndex = 16;
-			SaveConsoleToolTip.SetToolTip(LauncherSaveConsoleButton, "Save console to file");
-			LauncherSaveConsoleButton.UseVisualStyleBackColor = true;
-			LauncherSaveConsoleButton.Click += new System.EventHandler(LauncherSaveConsoleButton_Click);
+			this.LauncherSaveConsoleButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherSaveConsoleButton.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
+			this.LauncherSaveConsoleButton.Image = ((System.Drawing.Image)(resources.GetObject("LauncherSaveConsoleButton.Image")));
+			this.LauncherSaveConsoleButton.Location = new System.Drawing.Point(794, 244);
+			this.LauncherSaveConsoleButton.Name = "LauncherSaveConsoleButton";
+			this.LauncherSaveConsoleButton.Size = new System.Drawing.Size(27, 23);
+			this.LauncherSaveConsoleButton.TabIndex = 16;
+			this.SaveConsoleToolTip.SetToolTip(this.LauncherSaveConsoleButton, "Save console to file");
+			this.LauncherSaveConsoleButton.UseVisualStyleBackColor = true;
+			this.LauncherSaveConsoleButton.Click += new System.EventHandler(this.LauncherSaveConsoleButton_Click);
 			// 
 			// LauncherProcessTimeElapsedTextBox
 			// 
-			LauncherProcessTimeElapsedTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherProcessTimeElapsedTextBox.Location = new System.Drawing.Point(489, 246);
-			LauncherProcessTimeElapsedTextBox.Name = "LauncherProcessTimeElapsedTextBox";
-			LauncherProcessTimeElapsedTextBox.ReadOnly = true;
-			LauncherProcessTimeElapsedTextBox.Size = new System.Drawing.Size(55, 20);
-			LauncherProcessTimeElapsedTextBox.TabIndex = 4;
+			this.LauncherProcessTimeElapsedTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherProcessTimeElapsedTextBox.Location = new System.Drawing.Point(489, 246);
+			this.LauncherProcessTimeElapsedTextBox.Name = "LauncherProcessTimeElapsedTextBox";
+			this.LauncherProcessTimeElapsedTextBox.ReadOnly = true;
+			this.LauncherProcessTimeElapsedTextBox.Size = new System.Drawing.Size(55, 20);
+			this.LauncherProcessTimeElapsedTextBox.TabIndex = 4;
 			// 
 			// LauncherClearConsoleButton
 			// 
-			LauncherClearConsoleButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherClearConsoleButton.Location = new System.Drawing.Point(827, 244);
-			LauncherClearConsoleButton.Name = "LauncherClearConsoleButton";
-			LauncherClearConsoleButton.Size = new System.Drawing.Size(86, 23);
-			LauncherClearConsoleButton.TabIndex = 13;
-			LauncherClearConsoleButton.Text = "Clear Console";
-			LauncherClearConsoleButton.UseVisualStyleBackColor = true;
-			LauncherClearConsoleButton.Click += new System.EventHandler(LauncherClearConsoleButton_Click);
+			this.LauncherClearConsoleButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.LauncherClearConsoleButton.Location = new System.Drawing.Point(827, 244);
+			this.LauncherClearConsoleButton.Name = "LauncherClearConsoleButton";
+			this.LauncherClearConsoleButton.Size = new System.Drawing.Size(86, 23);
+			this.LauncherClearConsoleButton.TabIndex = 13;
+			this.LauncherClearConsoleButton.Text = "Clear Console";
+			this.LauncherClearConsoleButton.UseVisualStyleBackColor = true;
+			this.LauncherClearConsoleButton.Click += new System.EventHandler(this.LauncherClearConsoleButton_Click);
 			// 
 			// LauncherProcessGroupBox
 			// 
-			LauncherProcessGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherProcessGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-			LauncherProcessGroupBox.Controls.Add(LauncherButtonCancel);
-			LauncherProcessGroupBox.Controls.Add(LauncherProcessList);
-			LauncherProcessGroupBox.Location = new System.Drawing.Point(3, 3);
-			LauncherProcessGroupBox.Name = "LauncherProcessGroupBox";
-			LauncherProcessGroupBox.Size = new System.Drawing.Size(140, 263);
-			LauncherProcessGroupBox.TabIndex = 2;
-			LauncherProcessGroupBox.TabStop = false;
-			LauncherProcessGroupBox.Text = "Processes";
+			this.LauncherProcessGroupBox.Controls.Add(this.LauncherButtonCancel);
+			this.LauncherProcessGroupBox.Controls.Add(this.LauncherProcessList);
+			this.LauncherProcessGroupBox.Location = new System.Drawing.Point(3, 3);
+			this.LauncherProcessGroupBox.Name = "LauncherProcessGroupBox";
+			this.LauncherProcessGroupBox.Size = new System.Drawing.Size(140, 263);
+			this.LauncherProcessGroupBox.TabIndex = 2;
+			this.LauncherProcessGroupBox.TabStop = false;
+			this.LauncherProcessGroupBox.Text = "Processes";
 			// 
 			// LauncherButtonCancel
 			// 
-			LauncherButtonCancel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+			this.LauncherButtonCancel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherButtonCancel.BackColor = System.Drawing.Color.LightCoral;
-			LauncherButtonCancel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			LauncherButtonCancel.ForeColor = System.Drawing.SystemColors.Info;
-			LauncherButtonCancel.Location = new System.Drawing.Point(6, 192);
-			LauncherButtonCancel.Name = "LauncherButtonCancel";
-			LauncherButtonCancel.Size = new System.Drawing.Size(128, 65);
-			LauncherButtonCancel.TabIndex = 4;
-			LauncherButtonCancel.Text = "Cancel";
-			LauncherButtonCancel.UseVisualStyleBackColor = false;
-			LauncherButtonCancel.Click += new System.EventHandler(LauncherButtonCancel_Click);
+			this.LauncherButtonCancel.BackColor = System.Drawing.Color.LightCoral;
+			this.LauncherButtonCancel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this.LauncherButtonCancel.ForeColor = System.Drawing.SystemColors.Info;
+			this.LauncherButtonCancel.Location = new System.Drawing.Point(6, 192);
+			this.LauncherButtonCancel.Name = "LauncherButtonCancel";
+			this.LauncherButtonCancel.Size = new System.Drawing.Size(128, 65);
+			this.LauncherButtonCancel.TabIndex = 4;
+			this.LauncherButtonCancel.Text = "Cancel";
+			this.LauncherButtonCancel.UseVisualStyleBackColor = false;
+			this.LauncherButtonCancel.Click += new System.EventHandler(this.LauncherButtonCancel_Click);
 			// 
 			// LauncherProcessList
 			// 
-			LauncherProcessList.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.LauncherProcessList.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherProcessList.BackColor = System.Drawing.SystemColors.Info;
-			LauncherProcessList.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			LauncherProcessList.Font = new System.Drawing.Font("Lucida Console", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			LauncherProcessList.ForeColor = System.Drawing.SystemColors.HotTrack;
-			LauncherProcessList.FormattingEnabled = true;
-			LauncherProcessList.IntegralHeight = false;
-			LauncherProcessList.ItemHeight = 11;
-			LauncherProcessList.Location = new System.Drawing.Point(6, 19);
-			LauncherProcessList.Name = "LauncherProcessList";
-			LauncherProcessList.Size = new System.Drawing.Size(128, 167);
-			LauncherProcessList.TabIndex = 1;
-			LauncherProcessList.SelectedIndexChanged += new System.EventHandler(LauncherProcessList_SelectedIndexChanged);
+			this.LauncherProcessList.BackColor = System.Drawing.SystemColors.Info;
+			this.LauncherProcessList.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.LauncherProcessList.Font = new System.Drawing.Font("Lucida Console", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this.LauncherProcessList.ForeColor = System.Drawing.SystemColors.HotTrack;
+			this.LauncherProcessList.FormattingEnabled = true;
+			this.LauncherProcessList.IntegralHeight = false;
+			this.LauncherProcessList.ItemHeight = 11;
+			this.LauncherProcessList.Location = new System.Drawing.Point(6, 19);
+			this.LauncherProcessList.Name = "LauncherProcessList";
+			this.LauncherProcessList.Size = new System.Drawing.Size(128, 167);
+			this.LauncherProcessList.TabIndex = 1;
+			this.LauncherProcessList.SelectedIndexChanged += new System.EventHandler(this.LauncherProcessList_SelectedIndexChanged);
 			// 
 			// LauncherProcessTextBox
 			// 
-			LauncherProcessTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+			this.LauncherProcessTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			LauncherProcessTextBox.Location = new System.Drawing.Point(149, 246);
-			LauncherProcessTextBox.Name = "LauncherProcessTextBox";
-			LauncherProcessTextBox.ReadOnly = true;
-			LauncherProcessTextBox.Size = new System.Drawing.Size(334, 20);
-			LauncherProcessTextBox.TabIndex = 11;
+			this.LauncherProcessTextBox.Location = new System.Drawing.Point(149, 246);
+			this.LauncherProcessTextBox.Name = "LauncherProcessTextBox";
+			this.LauncherProcessTextBox.ReadOnly = true;
+			this.LauncherProcessTextBox.Size = new System.Drawing.Size(334, 20);
+			this.LauncherProcessTextBox.TabIndex = 11;
 			// 
 			// LauncherTimer
 			// 
-			LauncherTimer.Enabled = true;
-			LauncherTimer.Interval = 1000;
-			LauncherTimer.Tick += new System.EventHandler(LauncherTimer_Tick);
+			this.LauncherTimer.Enabled = true;
+			this.LauncherTimer.Interval = 1000;
+			this.LauncherTimer.Tick += new System.EventHandler(this.LauncherTimer_Tick);
 			// 
 			// LauncherMapFilesSystemWatcher
 			// 
-			LauncherMapFilesSystemWatcher.EnableRaisingEvents = true;
-			LauncherMapFilesSystemWatcher.Filter = "*.map";
-			LauncherMapFilesSystemWatcher.NotifyFilter = System.IO.NotifyFilters.FileName;
-			LauncherMapFilesSystemWatcher.SynchronizingObject = this;
-			LauncherMapFilesSystemWatcher.Changed += new System.IO.FileSystemEventHandler(LauncherMapFilesSystemWatcher_Changed);
-			LauncherMapFilesSystemWatcher.Created += new System.IO.FileSystemEventHandler(LauncherMapFilesSystemWatcher_Created);
-			LauncherMapFilesSystemWatcher.Deleted += new System.IO.FileSystemEventHandler(LauncherMapFilesSystemWatcher_Deleted);
-			LauncherMapFilesSystemWatcher.Renamed += new System.IO.RenamedEventHandler(LauncherMapFilesSystemWatcher_Renamed);
+			this.LauncherMapFilesSystemWatcher.EnableRaisingEvents = true;
+			this.LauncherMapFilesSystemWatcher.Filter = "*.map";
+			this.LauncherMapFilesSystemWatcher.NotifyFilter = System.IO.NotifyFilters.FileName;
+			this.LauncherMapFilesSystemWatcher.SynchronizingObject = this;
+			this.LauncherMapFilesSystemWatcher.Changed += new System.IO.FileSystemEventHandler(this.LauncherMapFilesSystemWatcher_Changed);
+			this.LauncherMapFilesSystemWatcher.Created += new System.IO.FileSystemEventHandler(this.LauncherMapFilesSystemWatcher_Created);
+			this.LauncherMapFilesSystemWatcher.Deleted += new System.IO.FileSystemEventHandler(this.LauncherMapFilesSystemWatcher_Deleted);
+			this.LauncherMapFilesSystemWatcher.Renamed += new System.IO.RenamedEventHandler(this.LauncherMapFilesSystemWatcher_Renamed);
 			// 
 			// LauncherModsDirectorySystemWatcher
 			// 
-			LauncherModsDirectorySystemWatcher.EnableRaisingEvents = true;
-			LauncherModsDirectorySystemWatcher.NotifyFilter = System.IO.NotifyFilters.DirectoryName;
-			LauncherModsDirectorySystemWatcher.SynchronizingObject = this;
-			LauncherModsDirectorySystemWatcher.Changed += new System.IO.FileSystemEventHandler(LauncherModsDirectorySystemWatcher_Changed);
-			LauncherModsDirectorySystemWatcher.Created += new System.IO.FileSystemEventHandler(LauncherModsDirectorySystemWatcher_Created);
-			LauncherModsDirectorySystemWatcher.Deleted += new System.IO.FileSystemEventHandler(LauncherModsDirectorySystemWatcher_Deleted);
-			LauncherModsDirectorySystemWatcher.Renamed += new System.IO.RenamedEventHandler(LauncherModsDirectorySystemWatcher_Renamed);
+			this.LauncherModsDirectorySystemWatcher.EnableRaisingEvents = true;
+			this.LauncherModsDirectorySystemWatcher.NotifyFilter = System.IO.NotifyFilters.DirectoryName;
+			this.LauncherModsDirectorySystemWatcher.SynchronizingObject = this;
+			this.LauncherModsDirectorySystemWatcher.Changed += new System.IO.FileSystemEventHandler(this.LauncherModsDirectorySystemWatcher_Changed);
+			this.LauncherModsDirectorySystemWatcher.Created += new System.IO.FileSystemEventHandler(this.LauncherModsDirectorySystemWatcher_Created);
+			this.LauncherModsDirectorySystemWatcher.Deleted += new System.IO.FileSystemEventHandler(this.LauncherModsDirectorySystemWatcher_Deleted);
+			this.LauncherModsDirectorySystemWatcher.Renamed += new System.IO.RenamedEventHandler(this.LauncherModsDirectorySystemWatcher_Renamed);
 			// 
 			// menuStrip1
 			// 
-			menuStrip1.BackColor = System.Drawing.SystemColors.ControlLight;
-			menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            LauncherfileToolStripMenuItem,
-            LauncherdocsToolStripMenuItem,
-            LaunchertoolsToolStripMenuItem,
-            LauncherhelpToolStripMenuItem});
-			menuStrip1.Location = new System.Drawing.Point(0, 0);
-			menuStrip1.Name = "menuStrip1";
-			menuStrip1.Size = new System.Drawing.Size(978, 24);
-			menuStrip1.TabIndex = 9;
-			menuStrip1.Text = "menuStrip1";
+			this.menuStrip1.BackColor = System.Drawing.SystemColors.ControlLight;
+			this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.LauncherfileToolStripMenuItem,
+            this.LauncherdocsToolStripMenuItem,
+            this.LaunchertoolsToolStripMenuItem,
+            this.LauncherhelpToolStripMenuItem});
+			this.menuStrip1.Location = new System.Drawing.Point(0, 0);
+			this.menuStrip1.Name = "menuStrip1";
+			this.menuStrip1.Size = new System.Drawing.Size(978, 24);
+			this.menuStrip1.TabIndex = 9;
+			this.menuStrip1.Text = "menuStrip1";
 			// 
 			// LauncherfileToolStripMenuItem
 			// 
-			LauncherfileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            newModToolStripMenuItem,
-            LaunchernewMapToolStripMenuItem,
-            toolStripSeparator3,
-            gameDirToolStripMenuItem,
-            toolStripSeparator1,
-            LauncherexitToolStripMenuItem});
-			LauncherfileToolStripMenuItem.Name = "LauncherfileToolStripMenuItem";
-			LauncherfileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
-			LauncherfileToolStripMenuItem.Text = "File";
+			this.LauncherfileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.newModToolStripMenuItem,
+            this.toolStripSeparator3,
+            this.gameDirToolStripMenuItem,
+            this.toolStripSeparator1,
+            this.LauncherexitToolStripMenuItem});
+			this.LauncherfileToolStripMenuItem.Name = "LauncherfileToolStripMenuItem";
+			this.LauncherfileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
+			this.LauncherfileToolStripMenuItem.Text = "File";
 			// 
 			// newModToolStripMenuItem
 			// 
-			newModToolStripMenuItem.Name = "newModToolStripMenuItem";
-			newModToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F2;
-			newModToolStripMenuItem.Size = new System.Drawing.Size(170, 22);
-			newModToolStripMenuItem.Text = "New mod...";
-			newModToolStripMenuItem.Click += new System.EventHandler(newModToolStripMenuItem_Click);
-			// 
-			// LaunchernewMapToolStripMenuItem
-			// 
-			LaunchernewMapToolStripMenuItem.Name = "LaunchernewMapToolStripMenuItem";
-			LaunchernewMapToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F3;
-			LaunchernewMapToolStripMenuItem.Size = new System.Drawing.Size(170, 22);
-			LaunchernewMapToolStripMenuItem.Text = "New map...";
-			LaunchernewMapToolStripMenuItem.Visible = false;
-			LaunchernewMapToolStripMenuItem.Click += new System.EventHandler(LaunchernewMapToolStripMenuItem_Click);
+			this.newModToolStripMenuItem.Name = "newModToolStripMenuItem";
+			this.newModToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F2;
+			this.newModToolStripMenuItem.Size = new System.Drawing.Size(170, 22);
+			this.newModToolStripMenuItem.Text = "New mod...";
+			this.newModToolStripMenuItem.Click += new System.EventHandler(this.NewModToolStripMenuItem_Click);
 			// 
 			// toolStripSeparator3
 			// 
-			toolStripSeparator3.Name = "toolStripSeparator3";
-			toolStripSeparator3.Size = new System.Drawing.Size(167, 6);
+			this.toolStripSeparator3.Name = "toolStripSeparator3";
+			this.toolStripSeparator3.Size = new System.Drawing.Size(167, 6);
 			// 
 			// gameDirToolStripMenuItem
 			// 
-			gameDirToolStripMenuItem.Name = "gameDirToolStripMenuItem";
-			gameDirToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F5;
-			gameDirToolStripMenuItem.Size = new System.Drawing.Size(170, 22);
-			gameDirToolStripMenuItem.Text = "View Game Dir";
-			gameDirToolStripMenuItem.Click += new System.EventHandler(gameDirToolStripMenuItem_Click);
+			this.gameDirToolStripMenuItem.Name = "gameDirToolStripMenuItem";
+			this.gameDirToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F5;
+			this.gameDirToolStripMenuItem.Size = new System.Drawing.Size(170, 22);
+			this.gameDirToolStripMenuItem.Text = "View Game Dir";
+			this.gameDirToolStripMenuItem.Click += new System.EventHandler(this.GameDirToolStripMenuItem_Click);
 			// 
 			// toolStripSeparator1
 			// 
-			toolStripSeparator1.Name = "toolStripSeparator1";
-			toolStripSeparator1.Size = new System.Drawing.Size(167, 6);
+			this.toolStripSeparator1.Name = "toolStripSeparator1";
+			this.toolStripSeparator1.Size = new System.Drawing.Size(167, 6);
 			// 
 			// LauncherexitToolStripMenuItem
 			// 
-			LauncherexitToolStripMenuItem.Name = "LauncherexitToolStripMenuItem";
-			LauncherexitToolStripMenuItem.Size = new System.Drawing.Size(170, 22);
-			LauncherexitToolStripMenuItem.Text = "Exit";
-			LauncherexitToolStripMenuItem.Click += new System.EventHandler(LauncherexitToolStripMenuItem_Click);
+			this.LauncherexitToolStripMenuItem.Name = "LauncherexitToolStripMenuItem";
+			this.LauncherexitToolStripMenuItem.Size = new System.Drawing.Size(170, 22);
+			this.LauncherexitToolStripMenuItem.Text = "Exit";
+			this.LauncherexitToolStripMenuItem.Click += new System.EventHandler(this.LauncherexitToolStripMenuItem_Click);
 			// 
 			// LauncherdocsToolStripMenuItem
 			// 
-			LauncherdocsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            mayaExporterToolStripMenuItem,
-            exporterTutorialToolStripMenuItem});
-			LauncherdocsToolStripMenuItem.Name = "LauncherdocsToolStripMenuItem";
-			LauncherdocsToolStripMenuItem.Size = new System.Drawing.Size(45, 20);
-			LauncherdocsToolStripMenuItem.Text = "Docs";
+			this.LauncherdocsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.mayaExporterToolStripMenuItem,
+            this.exporterTutorialToolStripMenuItem});
+			this.LauncherdocsToolStripMenuItem.Name = "LauncherdocsToolStripMenuItem";
+			this.LauncherdocsToolStripMenuItem.Size = new System.Drawing.Size(45, 20);
+			this.LauncherdocsToolStripMenuItem.Text = "Docs";
 			// 
 			// mayaExporterToolStripMenuItem
 			// 
-			mayaExporterToolStripMenuItem.Name = "mayaExporterToolStripMenuItem";
-			mayaExporterToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
-			mayaExporterToolStripMenuItem.Text = "Maya CoDTools";
-			mayaExporterToolStripMenuItem.Click += new System.EventHandler(mayaExporterToolStripMenuItem_Click);
+			this.mayaExporterToolStripMenuItem.Name = "mayaExporterToolStripMenuItem";
+			this.mayaExporterToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+			this.mayaExporterToolStripMenuItem.Text = "Maya CoDTools";
+			this.mayaExporterToolStripMenuItem.Click += new System.EventHandler(this.MayaExporterToolStripMenuItem_Click);
 			// 
 			// exporterTutorialToolStripMenuItem
 			// 
-			exporterTutorialToolStripMenuItem.Name = "exporterTutorialToolStripMenuItem";
-			exporterTutorialToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
-			exporterTutorialToolStripMenuItem.Text = "Exporter Tutorial";
-			exporterTutorialToolStripMenuItem.Click += new System.EventHandler(exporterTutorialToolStripMenuItem_Click);
+			this.exporterTutorialToolStripMenuItem.Name = "exporterTutorialToolStripMenuItem";
+			this.exporterTutorialToolStripMenuItem.Size = new System.Drawing.Size(161, 22);
+			this.exporterTutorialToolStripMenuItem.Text = "Exporter Tutorial";
+			this.exporterTutorialToolStripMenuItem.Click += new System.EventHandler(this.ExporterTutorialToolStripMenuItem_Click);
 			// 
 			// LaunchertoolsToolStripMenuItem
 			// 
-			LaunchertoolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            mayaPluginSetupToolStripMenuItem});
-			LaunchertoolsToolStripMenuItem.Name = "LaunchertoolsToolStripMenuItem";
-			LaunchertoolsToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
-			LaunchertoolsToolStripMenuItem.Text = "Tools";
+			this.LaunchertoolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.mayaPluginSetupToolStripMenuItem});
+			this.LaunchertoolsToolStripMenuItem.Name = "LaunchertoolsToolStripMenuItem";
+			this.LaunchertoolsToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
+			this.LaunchertoolsToolStripMenuItem.Text = "Tools";
 			// 
 			// mayaPluginSetupToolStripMenuItem
 			// 
-			mayaPluginSetupToolStripMenuItem.Name = "mayaPluginSetupToolStripMenuItem";
-			mayaPluginSetupToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
-			mayaPluginSetupToolStripMenuItem.Text = "Maya Plugin Setup";
-			mayaPluginSetupToolStripMenuItem.Click += new System.EventHandler(mayaPluginSetupToolStripMenuItem_Click);
+			this.mayaPluginSetupToolStripMenuItem.Name = "mayaPluginSetupToolStripMenuItem";
+			this.mayaPluginSetupToolStripMenuItem.Size = new System.Drawing.Size(173, 22);
+			this.mayaPluginSetupToolStripMenuItem.Text = "Maya Plugin Setup";
+			this.mayaPluginSetupToolStripMenuItem.Click += new System.EventHandler(this.MayaPluginSetupToolStripMenuItem_Click);
 			// 
 			// LauncherhelpToolStripMenuItem
 			// 
-			LauncherhelpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            LauncherwikiToolStripMenuItem});
-			LauncherhelpToolStripMenuItem.Name = "LauncherhelpToolStripMenuItem";
-			LauncherhelpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
-			LauncherhelpToolStripMenuItem.Text = "Help";
+			this.LauncherhelpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.LauncherwikiToolStripMenuItem});
+			this.LauncherhelpToolStripMenuItem.Name = "LauncherhelpToolStripMenuItem";
+			this.LauncherhelpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
+			this.LauncherhelpToolStripMenuItem.Text = "Help";
 			// 
 			// LauncherwikiToolStripMenuItem
 			// 
-			LauncherwikiToolStripMenuItem.Name = "LauncherwikiToolStripMenuItem";
-			LauncherwikiToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F1;
-			LauncherwikiToolStripMenuItem.Size = new System.Drawing.Size(116, 22);
-			LauncherwikiToolStripMenuItem.Text = "Wiki";
-			LauncherwikiToolStripMenuItem.Click += new System.EventHandler(LauncherwikiToolStripMenuItem_Click);
+			this.LauncherwikiToolStripMenuItem.Name = "LauncherwikiToolStripMenuItem";
+			this.LauncherwikiToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F1;
+			this.LauncherwikiToolStripMenuItem.Size = new System.Drawing.Size(116, 22);
+			this.LauncherwikiToolStripMenuItem.Text = "Wiki";
+			this.LauncherwikiToolStripMenuItem.Click += new System.EventHandler(this.LauncherwikiToolStripMenuItem_Click);
 			// 
 			// LauncherMapListContextMenuStrip
 			// 
-			LauncherMapListContextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            runToolStripMenuItem,
-            editToolStripMenuItem,
-            toolStripSeparator2,
-            deleteToolStripMenuItem,
-            renameToolStripMenuItem});
-			LauncherMapListContextMenuStrip.Name = "LauncherMapListContextMenuStrip";
-			LauncherMapListContextMenuStrip.Size = new System.Drawing.Size(118, 98);
+			this.LauncherMapListContextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.runToolStripMenuItem,
+            this.editToolStripMenuItem,
+            this.toolStripSeparator2,
+            this.deleteToolStripMenuItem,
+            this.renameToolStripMenuItem});
+			this.LauncherMapListContextMenuStrip.Name = "LauncherMapListContextMenuStrip";
+			this.LauncherMapListContextMenuStrip.Size = new System.Drawing.Size(118, 98);
 			// 
 			// runToolStripMenuItem
 			// 
-			runToolStripMenuItem.Name = "runToolStripMenuItem";
-			runToolStripMenuItem.Size = new System.Drawing.Size(117, 22);
-			runToolStripMenuItem.Text = "&Run";
-			runToolStripMenuItem.Click += new System.EventHandler(RunToolStripMenuItem_Click);
+			this.runToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("runToolStripMenuItem.Image")));
+			this.runToolStripMenuItem.Name = "runToolStripMenuItem";
+			this.runToolStripMenuItem.Size = new System.Drawing.Size(117, 22);
+			this.runToolStripMenuItem.Text = "&Run";
+			this.runToolStripMenuItem.Click += new System.EventHandler(this.RunToolStripMenuItem_Click);
 			// 
 			// editToolStripMenuItem
 			// 
-			editToolStripMenuItem.Name = "editToolStripMenuItem";
-			editToolStripMenuItem.Size = new System.Drawing.Size(117, 22);
-			editToolStripMenuItem.Text = "&Edit";
-			editToolStripMenuItem.Click += new System.EventHandler(EditToolStripMenuItem_Click);
+			this.editToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("editToolStripMenuItem.Image")));
+			this.editToolStripMenuItem.Name = "editToolStripMenuItem";
+			this.editToolStripMenuItem.Size = new System.Drawing.Size(117, 22);
+			this.editToolStripMenuItem.Text = "&Edit";
+			this.editToolStripMenuItem.Click += new System.EventHandler(this.EditToolStripMenuItem_Click);
 			// 
 			// toolStripSeparator2
 			// 
-			toolStripSeparator2.Name = "toolStripSeparator2";
-			toolStripSeparator2.Size = new System.Drawing.Size(114, 6);
+			this.toolStripSeparator2.Name = "toolStripSeparator2";
+			this.toolStripSeparator2.Size = new System.Drawing.Size(114, 6);
 			// 
 			// deleteToolStripMenuItem
 			// 
-			deleteToolStripMenuItem.Name = "deleteToolStripMenuItem";
-			deleteToolStripMenuItem.Size = new System.Drawing.Size(117, 22);
-			deleteToolStripMenuItem.Text = "&Delete";
-			deleteToolStripMenuItem.Click += new System.EventHandler(DeleteToolStripMenuItem_Click);
+			this.deleteToolStripMenuItem.Name = "deleteToolStripMenuItem";
+			this.deleteToolStripMenuItem.Size = new System.Drawing.Size(117, 22);
+			this.deleteToolStripMenuItem.Text = "&Delete";
+			this.deleteToolStripMenuItem.Click += new System.EventHandler(this.DeleteToolStripMenuItem_Click);
 			// 
 			// renameToolStripMenuItem
 			// 
-			renameToolStripMenuItem.Enabled = false;
-			renameToolStripMenuItem.Name = "renameToolStripMenuItem";
-			renameToolStripMenuItem.Size = new System.Drawing.Size(117, 22);
-			renameToolStripMenuItem.Text = "Re&name";
+			this.renameToolStripMenuItem.Enabled = false;
+			this.renameToolStripMenuItem.Name = "renameToolStripMenuItem";
+			this.renameToolStripMenuItem.Size = new System.Drawing.Size(117, 22);
+			this.renameToolStripMenuItem.Text = "Re&name";
 			// 
-			// LauncherForm
+			// MainWindow
 			// 
-			AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-			AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			ClientSize = new System.Drawing.Size(978, 688);
-			Controls.Add(menuStrip1);
-			Controls.Add(LauncherSplitter);
-			Icon = ((System.Drawing.Icon)(resources.GetObject("$Icon")));
-			Name = "LauncherForm";
-			StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-			Text = "Launcher";
-			FormClosing += new System.Windows.Forms.FormClosingEventHandler(LauncherForm_FormClosing);
-			Load += new System.EventHandler(LauncherForm_Load);
-			LauncherSplitter.Panel1.ResumeLayout(false);
-			LauncherSplitter.Panel1.PerformLayout();
-			LauncherSplitter.Panel2.ResumeLayout(false);
-			LauncherSplitter.Panel2.PerformLayout();
-			((System.ComponentModel.ISupportInitialize)(LauncherSplitter)).EndInit();
-			LauncherSplitter.ResumeLayout(false);
-			panel1.ResumeLayout(false);
-			LauncherRunGameCustomCommandLineGroupBox.ResumeLayout(false);
-			LauncherRunGameCustomCommandLineGroupBox.PerformLayout();
-			LauncherRunGameGroupBox.ResumeLayout(false);
-			LauncherRunGameGroupBox.PerformLayout();
-			LauncherRunGameCustomCommandLineMPGroupBox.ResumeLayout(false);
-			LauncherRunGameCustomCommandLineMPGroupBox.PerformLayout();
-			LauncherRunGameModGroupBox.ResumeLayout(false);
-			((System.ComponentModel.ISupportInitialize)(LauncherIconBlops)).EndInit();
-			LauncherGameGroupBox.ResumeLayout(false);
-			LauncherGameGroupBox.PerformLayout();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconMP)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconSP)).EndInit();
-			LauncherTab.ResumeLayout(false);
-			LauncherTabModBuilder.ResumeLayout(false);
-			LauncherIwdFileGroupBox.ResumeLayout(false);
-			LauncherModGroupBox.ResumeLayout(false);
-			LauncherModFolderGroupBox.ResumeLayout(false);
-			LauncherModBuildGroupBox.ResumeLayout(false);
-			LauncherModBuildGroupBox.PerformLayout();
-			LauncherModZoneSourceGroupBox.ResumeLayout(false);
-			LauncherTabCompileLevel.ResumeLayout(false);
-			LauncherTabCompileLevel.PerformLayout();
-			LauncherCompileLevelOptionsGroupBox.ResumeLayout(false);
-			LauncherCompileLevelOptionsGroupBox.PerformLayout();
-			LauncherGridFileGroupBox.ResumeLayout(false);
-			LauncherGridFileGroupBox.PerformLayout();
-			LauncherTabExplore.ResumeLayout(false);
-			LauncherExploreGroupBox.ResumeLayout(false);
-			LauncherExploreRawMapsDirGroupBox.ResumeLayout(false);
-			LauncherExploreRawDirGroupBox.ResumeLayout(false);
-			LauncherExploreDevDirGroupBox.ResumeLayout(false);
-			LauncherExploreBlopsDirGroupBox.ResumeLayout(false);
-			LauncherApplicationsGroupBox.ResumeLayout(false);
-			((System.ComponentModel.ISupportInitialize)(LauncherIconRadiant)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconEffectsEditor)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconConverter)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconAssetViewer)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherIconAssetManager)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherWarningsNumericUpDown)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherWarningsPictureBox)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherErrorsNumericUpDown)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherErrorsPictureBox)).EndInit();
-			LauncherProcessGroupBox.ResumeLayout(false);
-			((System.ComponentModel.ISupportInitialize)(LauncherMapFilesSystemWatcher)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(LauncherModsDirectorySystemWatcher)).EndInit();
-			menuStrip1.ResumeLayout(false);
-			menuStrip1.PerformLayout();
-			LauncherMapListContextMenuStrip.ResumeLayout(false);
-			ResumeLayout(false);
-			PerformLayout();
+			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+			this.ClientSize = new System.Drawing.Size(978, 688);
+			this.Controls.Add(this.menuStrip1);
+			this.Controls.Add(this.LauncherSplitter);
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.Name = "MainWindow";
+			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+			this.Text = "Launcher";
+			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainWindow_FormClosing);
+			this.Load += new System.EventHandler(this.MainWindow_Load);
+			this.LauncherSplitter.Panel1.ResumeLayout(false);
+			this.LauncherSplitter.Panel1.PerformLayout();
+			this.LauncherSplitter.Panel2.ResumeLayout(false);
+			this.LauncherSplitter.Panel2.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherSplitter)).EndInit();
+			this.LauncherSplitter.ResumeLayout(false);
+			this.panel1.ResumeLayout(false);
+			this.LauncherRunGameCustomCommandLineGroupBox.ResumeLayout(false);
+			this.LauncherRunGameCustomCommandLineGroupBox.PerformLayout();
+			this.LauncherRunGameGroupBox.ResumeLayout(false);
+			this.LauncherRunGameGroupBox.PerformLayout();
+			this.LauncherRunGameCustomCommandLineMPGroupBox.ResumeLayout(false);
+			this.LauncherRunGameCustomCommandLineMPGroupBox.PerformLayout();
+			this.LauncherRunGameModGroupBox.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconBlops)).EndInit();
+			this.LauncherGameGroupBox.ResumeLayout(false);
+			this.LauncherGameGroupBox.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconMP)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconSP)).EndInit();
+			this.LauncherTab.ResumeLayout(false);
+			this.LauncherTabModBuilder.ResumeLayout(false);
+			this.LauncherIwdFileGroupBox.ResumeLayout(false);
+			this.LauncherModGroupBox.ResumeLayout(false);
+			this.LauncherModFolderGroupBox.ResumeLayout(false);
+			this.LauncherModBuildGroupBox.ResumeLayout(false);
+			this.LauncherModBuildGroupBox.PerformLayout();
+			this.LauncherModZoneSourceGroupBox.ResumeLayout(false);
+			this.LauncherTabCompileLevel.ResumeLayout(false);
+			this.LauncherTabCompileLevel.PerformLayout();
+			this.LauncherCompileLevelOptionsGroupBox.ResumeLayout(false);
+			this.LauncherCompileLevelOptionsGroupBox.PerformLayout();
+			this.LauncherGridFileGroupBox.ResumeLayout(false);
+			this.LauncherGridFileGroupBox.PerformLayout();
+			this.LauncherTabExplore.ResumeLayout(false);
+			this.LauncherExploreGroupBox.ResumeLayout(false);
+			this.LauncherExploreRawMapsDirGroupBox.ResumeLayout(false);
+			this.LauncherExploreRawDirGroupBox.ResumeLayout(false);
+			this.LauncherExploreDevDirGroupBox.ResumeLayout(false);
+			this.LauncherExploreBlopsDirGroupBox.ResumeLayout(false);
+			this.LauncherApplicationsGroupBox.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconRadiant)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconEffectsEditor)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconConverter)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconAssetViewer)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherIconAssetManager)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherWarningsNumericUpDown)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherWarningsPictureBox)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherErrorsNumericUpDown)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherErrorsPictureBox)).EndInit();
+			this.LauncherProcessGroupBox.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.LauncherMapFilesSystemWatcher)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.LauncherModsDirectorySystemWatcher)).EndInit();
+			this.menuStrip1.ResumeLayout(false);
+			this.menuStrip1.PerformLayout();
+			this.LauncherMapListContextMenuStrip.ResumeLayout(false);
+			this.ResumeLayout(false);
+			this.PerformLayout();
 		}
 
-		private bool IsMP()
+		private void MainWindow_Load(object sender, EventArgs e)
 		{
-			return Launcher.IsMP(mapName);
-		}
-
-		private void LauncherButtonAssetManager_Click(object sender, EventArgs e)
-		{
-			LaunchProcess(
-				"asset_manager",
-				"",
-				null,
-				false,
-				null);
-		}
-
-		private void LauncherButtonAssetViewer_Click(object sender, EventArgs e)
-		{
-			LaunchProcess(
-				"AssetViewer",
-				"",
-				null,
-				false,
-				null);
-		}
-
-		private void LauncherButtonCancel_Click(object sender, EventArgs e)
-		{
-			int selectedIndex = LauncherProcessList.SelectedIndex;
-			if (selectedIndex < 0) return;
-			((Process)((DictionaryEntry)processList[selectedIndex]).Key).Kill();
-		}
-
-		private void LauncherButtonCreateMap_Click(object sender, EventArgs e)
-		{
-			if (new CreateMap().ShowDialog() != DialogResult.OK) return;
 			UpdateMapList();
+			UpdateModList();
 			EnableMapList();
+			UpdateStopProcessButton();
+
+			LauncherMapFilesSystemWatcher.Path = Launcher.GetMapSourceDirectory();
+			LauncherModsDirectorySystemWatcher.Path = Launcher.GetModsDirectory();
+			LauncherMapFilesSystemWatcher.EnableRaisingEvents = true;
+			LauncherModsDirectorySystemWatcher.EnableRaisingEvents = true;
+
+			Text = $"{Text} - {Launcher.GetRootDirectory()}";
+
+			// Restore last active mod
+			string activeMod = Launcher.launcherSettings.GetString("active_mod");
+			if (!string.IsNullOrWhiteSpace(activeMod))
+				SetModSelection(activeMod, true);
 		}
 
-		private void LauncherButtonEffectsEd_Click(object sender, EventArgs e)
+		private void MainWindow_FormClosing(object sender, FormClosingEventArgs e)
 		{
-			LaunchProcess(
-				"EffectsEd3",
-				"",
-				null,
-				false,
-				null);
-		}
-
-		private void LauncherButtonMP_Click(object sender, EventArgs e)
-		{
-			string arguments = "";
-			if (LauncherGameDeveloperBox.Checked) arguments += "+set developer 1 +set developer_script 1 ";
-			if (LauncherGameLogfileBox.Checked) arguments += "+set logfile 1 ";
-
-			LaunchProcess(
-				Launcher.GetGameApplication(true),
-				arguments,
-				null,
-				false,
-				null);
-		}
-
-		private void LauncherButtonRadiant_Click(object sender, EventArgs e)
-		{
-			LaunchProcess("CoDBORadiant",
-				(mapName != null)
-				? Path.Combine(Launcher.GetMapSourceDirectory(), mapName + ".map")
-				: "",
-				null,
-				false,
-				null);
-		}
-
-		private void LauncherButtonRunConverter_Click(object sender, EventArgs eventArgs)
-		{
-			LaunchProcess(
-				"converter",
-				"-nopause -n -nospam",
-				null,
-				true,
-				null);
-		}
-
-		private void LauncherButtonSP_Click(object sender, EventArgs e)
-		{
-			string arguments = "";
-			if (LauncherGameDeveloperBox.Checked) arguments += "+set developer 1";
-			if (LauncherGameLogfileBox.Checked) arguments += "+set logfile 1 ";
-
-			LaunchProcess(
-				Launcher.GetGameApplication(false),
-				arguments,
-				null,
-				false,
-				null);
-		}
-
-		private void LauncherClearConsoleButton_Click(object sender, EventArgs e)
-		{
-			LauncherErrorsCounter.Text = "0";
-			//TODO LauncherErrorsPictureBox.BackgroundImage = Properties.Resources.error_grey;
-			LauncherWarningsCounter.Text = "0";
-			//TODO LauncherWarningsPictureBox.BackgroundImage = Properties.Resources.warning_grey;
-			LauncherConsole.Clear();
-		}
-
-		private void LauncherCompileBSPButton_Click(object sender, EventArgs e)
-		{
-			new LightOptions().ShowDialog();
-		}
-
-		private void LauncherCompileLevelButton_Click(object sender, EventArgs e)
-		{
-			CompileLevel();
-		}
-
-		private void LauncherCompileLightsButton_Click(object sender, EventArgs e)
-		{
-			new BspOptions().ShowDialog();
-		}
-
-		private void LauncherCompileLightsCheckBox_CheckedChanged(object sender, EventArgs e)
-		{
-			Launcher.mapSettings.SetDecimal("lightoptions_quality", 20M);
-		}
-
-		private void LauncherCreateMap_Click(object sender, EventArgs e)
-		{
-			if (new CreateMap().ShowDialog() != DialogResult.OK) return;
-			UpdateMapList();
-			EnableMapList();
-		}
-
-		private void LauncherDeleteMap_Click(object sender, EventArgs e)
-		{
-			string[] mapFiles1 = Launcher.GetMapFiles(mapName);
-			if (DialogResult.Yes != MessageBox.Show("The following files would be deleted:\n\n" + Launcher.StringArrayToString(mapFiles1), "Are you sure you want to delete these files?", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation))
-				return;
-			foreach (string fileName in mapFiles1)
-				Launcher.DeleteFile(fileName);
-			string[] mapFiles2 = Launcher.GetMapFiles(mapName);
-			if (mapFiles2.Length != 0)
+			if (processTable.Count != 0)
 			{
-				int num = (int) MessageBox.Show("Could not delete the following files:\n\n" + Launcher.StringArrayToString(mapFiles2), "Error deleting files", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+				switch (MessageBox.Show(
+					"But there are still processes running!\n\nDo you want to close them, or cancel exiting from the application?",
+					"Application will exit!",
+					MessageBoxButtons.YesNoCancel,
+					MessageBoxIcon.Exclamation))
+				{
+					case DialogResult.Cancel:
+						e.Cancel = true;
+						return;
+					case DialogResult.Yes:
+						IDictionaryEnumerator enumerator = processTable.GetEnumerator();
+						try
+						{
+							while (enumerator.MoveNext())
+								((Process)((DictionaryEntry)enumerator.Current).Key).Kill();
+							break;
+						}
+						finally
+						{
+							if (enumerator is IDisposable disposable)
+								disposable.Dispose();
+						}
+					default:
+						string[] stringArray = new string[processTable.Count];
+						int index = 0;
+
+						foreach (DictionaryEntry dictionaryEntry in processTable)
+						{
+							try
+							{
+								stringArray[index] = ((Process)dictionaryEntry.Key).MainModule.FileName;
+							}
+							catch
+							{
+								stringArray[index] = (string)dictionaryEntry.Value;
+							}
+							++index;
+						}
+
+						if (stringArray.Length != 0)
+						{
+							MessageBox.Show(
+								$"The following processes are still active:\n\n{Launcher.StringArrayToString(stringArray)}\nPlease close them if neccessary using the Task Manager, or similar program!\n",
+								"Note before exiting the application",
+								MessageBoxButtons.OK,
+								MessageBoxIcon.Exclamation);
+							break;
+						}
+						break;
+				}
 			}
-			UpdateMapList();
-			EnableMapList();
-			LauncherModSpecificMapComboBox.SelectedIndex = -1;
+
+			UpdateMapSettings();
+			UpdateModSettings();
+
+			Launcher.SaveLauncherSettings(Launcher.launcherSettings.Get());
 		}
 
-		private void LauncherEditZoneSourceButton_Click(object sender, EventArgs e)
-		{
-			new ZoneSource(LauncherModComboBox.SelectedItem.ToString()).ShowDialog();
-		}
-
-		private void LauncherErrorsNumericUpDown_ValueChanged(object sender, EventArgs e)
-		{
-			if (Convert.ToInt32(LauncherErrorsCounter.Text) <= 0) return;
-			LauncherConsole.SelectionStart = (LauncherErrorsNumericUpDown.Value != 0M)
-				? FindLauncherConsoleText("ERROR:", LauncherConsole.SelectionStart + LauncherConsole.SelectionLength, LauncherConsole.Text.Length)
-				: FindLauncherConsoleText("ERROR:", 0, LauncherConsole.SelectionStart);
-		}
-
-		private void LauncherexitToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-			Application.Exit();
-		}
-
+#region Buttons
 		private void LauncherExploreBlopsDirConfigsButton_Click(object sender, EventArgs e)
 		{
 			ExploreOpenDir(Launcher.GetRootDirectory() + "players\\");
@@ -2999,122 +2860,612 @@ namespace Launcher
 			ExploreOpenDir(Launcher.GetRootDirectory() + "raw\\maps\\voice\\");
 		}
 
-		private void LauncherForm_FormClosing(object sender, FormClosingEventArgs e)
+		private void LauncherCompileBSPButton_Click(object sender, EventArgs e)
 		{
-		  if (processTable.Count != 0)
-		  {
-			switch (MessageBox.Show("But there are still processes running!\n\nDo you want to close them, or cancel exiting from the application?", "Application will exit!", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation))
+			using (var lightOptions = new LightOptions())
 			{
-			  case DialogResult.Cancel:
-				e.Cancel = true;
-				return;
-			  case DialogResult.Yes:
-				IDictionaryEnumerator enumerator = processTable.GetEnumerator();
-				try
-				{
-				  while (enumerator.MoveNext())
-					((Process) ((DictionaryEntry) enumerator.Current).Key).Kill();
-				  break;
-				}
-				finally
-				{
-				  if (enumerator is IDisposable disposable)
-					disposable.Dispose();
-				}
-			  default:
-				string[] stringArray = new string[processTable.Count];
-				int index = 0;
-				foreach (DictionaryEntry dictionaryEntry in processTable)
-				{
-				  try
-				  {
-					stringArray[index] = ((Process) dictionaryEntry.Key).MainModule.FileName;
-				  }
-				  catch
-				  {
-					stringArray[index] = (string) dictionaryEntry.Value;
-				  }
-				  ++index;
-				}
-				if (stringArray.Length != 0)
-				{
-				  int num = (int) MessageBox.Show("The following processes are still active:\n\n" + Launcher.StringArrayToString(stringArray) + "\nPlease close them if neccessary using the Task Manager, or similar program!\n", "Note before exiting the application", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-				  break;
-				}
-				break;
+				lightOptions.ShowDialog();
 			}
-		  }
-		  UpdateMapSettings();
-		  UpdateModSettings();
-		  Launcher.SaveLauncherSettings(Launcher.launcherSettings.Get());
 		}
 
-		private void LauncherForm_Load(object sender, EventArgs e)
+		private void LauncherexitToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-		  UpdateDVars();
-		  UpdateMapList();
-		  UpdateModList();
-		  EnableMapList();
-		  UpdateStopProcessButton();
-		  LauncherMapFilesSystemWatcher.Path = Launcher.GetMapSourceDirectory();
-		  LauncherModsDirectorySystemWatcher.Path = Launcher.GetModsDirectory();
-		  LauncherMapFilesSystemWatcher.EnableRaisingEvents = true;
-		  LauncherModsDirectorySystemWatcher.EnableRaisingEvents = true;
-		  MainWindow launcherForm = this;
-		  launcherForm.Text = launcherForm.Text + " - " + Launcher.GetRootDirectory();
-		  SetModSelection(Launcher.launcherSettings.GetString("active_mod"), true);
-		}
-
-		private void LauncherGameOptionsFlowPanel_Click(object sender, EventArgs e)
-		{
-		  MouseEventArgs mouseEventArgs = (MouseEventArgs) e;
-		  Control control = (Control) sender;
-		  if (mouseEventArgs.Button != MouseButtons.Right)
-			return;
-		  ContextMenuStrip contextMenuStrip = new ContextMenuStrip();
-		  contextMenuStrip.Items.Add("Edit dvar");
-		  contextMenuStrip.Items.Add("Remove dvar");
-		  contextMenuStrip.Items.Add("Add new dvar");
-		  contextMenuStrip.Items.Add("Duplicate dvar");
-		  contextMenuStrip.Show(control.PointToScreen(mouseEventArgs.Location));
+			Application.Exit();
 		}
 
 		private void LauncherGridEditExistingButton_Click(object sender, EventArgs e)
 		{
-		  BuildGridDelegate(2);
+			BuildGridDelegate(2);
 		}
 
 		private void LauncherGridMakeNewButton_Click(object sender, EventArgs e)
 		{
-		  BuildGridDelegate(1);
+			BuildGridDelegate(1);
 		}
 
-		private void LauncherIwdFileTree_AfterCheck(object sender, TreeViewEventArgs e)
+		private void LauncherButtonMP_Click(object sender, EventArgs e)
 		{
-		  LauncherIwdFileTreeBeginUpdate();
-		  RecursiveCheckNodesDown(e.Node.Nodes, e.Node.Checked);
-		  if (e.Node.Checked)
-			RecursiveCheckNodesUp(e.Node.Parent, e.Node.Checked);
-		  LauncherIwdFileTreeEndUpdate();
+			string arguments = "";
+			if (LauncherGameDeveloperBox.Checked) arguments += "+set developer 1 +set developer_script 1 ";
+			if (LauncherGameLogfileBox.Checked) arguments += "+set logfile 1 ";
+
+			LaunchProcess(
+				Launcher.GetGameApplication(true),
+				arguments,
+				null,
+				false,
+				null);
+		}
+
+		private void LauncherButtonSP_Click(object sender, EventArgs e)
+		{
+			string arguments = "";
+			if (LauncherGameDeveloperBox.Checked) arguments += "+set developer 1";
+			if (LauncherGameLogfileBox.Checked) arguments += "+set logfile 1 ";
+
+			LaunchProcess(
+				Launcher.GetGameApplication(false),
+				arguments,
+				null,
+				false,
+				null);
+		}
+
+		private void LauncherButtonEffectsEd_Click(object sender, EventArgs e)
+		{
+			LaunchProcess(
+				"EffectsEd3",
+				"",
+				null,
+				false,
+				null);
+		}
+
+		private void LauncherButtonAssetManager_Click(object sender, EventArgs e)
+		{
+			LaunchProcess(
+				"asset_manager",
+				"",
+				null,
+				false,
+				null);
+		}
+
+		private void LauncherButtonAssetViewer_Click(object sender, EventArgs e)
+		{
+			LaunchProcess(
+				"AssetViewer",
+				"",
+				null,
+				false,
+				null);
+		}
+
+		private void LauncherButtonRunConverter_Click(object sender, EventArgs eventArgs)
+		{
+			LaunchProcess(
+				"converter",
+				"-nopause -n -nospam",
+				null,
+				true,
+				null);
+		}
+
+		private void LauncherButtonRadiant_Click(object sender, EventArgs e)
+		{
+			LaunchProcess("CoDBORadiant",
+				(mapName != null)
+				? Path.Combine(Launcher.GetMapSourceDirectory(), mapName + ".map")
+				: "",
+				null,
+				false,
+				null);
+		}
+
+		private void LauncherButtonCancel_Click(object sender, EventArgs e)
+		{
+			int selectedIndex = LauncherProcessList.SelectedIndex;
+			if (selectedIndex < 0) return;
+			((Process)((DictionaryEntry)processList[selectedIndex]).Key).Kill();
+		}
+
+		private void LauncherClearConsoleButton_Click(object sender, EventArgs e)
+		{
+			LauncherErrorsCounter.Text = "0";
+			LauncherErrorsPictureBox.BackgroundImage = Resources.error_grey;
+			LauncherWarningsCounter.Text = "0";
+			LauncherWarningsPictureBox.BackgroundImage = Resources.warning_grey;
+			LauncherConsole.Clear();
+		}
+
+		private void LauncherCompileLevelButton_Click(object sender, EventArgs e)
+		{
+			CompileLevel();
+		}
+
+		private void LauncherCompileLightsButton_Click(object sender, EventArgs e)
+		{
+			using (var bspOptions = new BspOptions())
+			{
+				bspOptions.ShowDialog();
+			}
+		}
+
+		private void LauncherCreateMap_Click(object sender, EventArgs e)
+		{
+			var createMapDialog = new CreateMap();
+
+			if (createMapDialog.ShowDialog() != DialogResult.OK)
+				return;
+
+			UpdateMapList();
+			EnableMapList();
+		}
+
+		private void LauncherDeleteMap_Click(object sender, EventArgs e)
+		{
+			string[] filesToDelete = Launcher.GetMapFiles(mapName);
+
+			string confirmationMessage = "The following files will be deleted:\n\n" +
+										 Launcher.StringArrayToString(filesToDelete);
+
+			DialogResult confirm = MessageBox.Show(confirmationMessage,
+												   "Confirm Map Deletion",
+												   MessageBoxButtons.YesNo,
+												   MessageBoxIcon.Warning);
+
+			if (confirm != DialogResult.Yes)
+				return;
+
+			foreach (string file in filesToDelete)
+				Utils.FileSystem.DeleteFile(file);
+
+			string[] remainingFiles = Launcher.GetMapFiles(mapName);
+			if (remainingFiles.Length > 0)
+			{
+				string errorMessage = "Could not delete the following files:\n\n" +
+									  Launcher.StringArrayToString(remainingFiles);
+
+				MessageBox.Show(errorMessage,
+								"Error Deleting Files",
+								MessageBoxButtons.OK,
+								MessageBoxIcon.Error);
+			}
+
+			UpdateMapList();
+			EnableMapList();
+
+			// Reset map combo selection after deletion
+			LauncherModSpecificMapComboBox.SelectedIndex = -1;
+		}
+
+		private void LauncherEditZoneSourceButton_Click(object sender, EventArgs e)
+		{
+			string selectedMod = LauncherModComboBox.SelectedItem.ToString();
+
+			var zoneSourceDialog = new ZoneSource(selectedMod);
+			zoneSourceDialog.ShowDialog();
 		}
 
 		private void LauncherIwdFileTree_DoubleClick(object sender, EventArgs e)
 		{
-		  if (LauncherIwdFileTree.SelectedNode == null)
-			return;
-		  try
-		  {
-			new Process()
+			if (LauncherIwdFileTree.SelectedNode == null)
+				return;
+
+			try
 			{
-			  StartInfo = {
-				ErrorDialog = true,
-				FileName = Path.Combine(Launcher.GetModDirectory(modName), LauncherIwdFileTree.SelectedNode.FullPath)
-			  }
-			}.Start();
-		  }
-		  catch
-		  {
-		  }
+				new Process()
+				{
+					StartInfo =
+					{
+						ErrorDialog = true,
+						FileName = Path.Combine(Launcher.GetModDirectory(modName), LauncherIwdFileTree.SelectedNode.FullPath)
+					}
+				}.Start();
+			}
+			catch
+			{
+			}
+		}
+
+		private void LauncherMapFilesSystemWatcher_Changed(object sender, FileSystemEventArgs e)
+		{
+			UpdateMapList();
+		}
+
+		private void LauncherMapFilesSystemWatcher_Created(object sender, FileSystemEventArgs e)
+		{
+			UpdateMapList();
+		}
+
+		private void LauncherMapFilesSystemWatcher_Deleted(object sender, FileSystemEventArgs e)
+		{
+			UpdateMapList();
+		}
+
+		private void LauncherMapFilesSystemWatcher_Renamed(object sender, RenamedEventArgs e)
+		{
+			UpdateMapList();
+		}
+
+		private void LauncherMapList_DoubleClick(object sender, EventArgs e)
+		{
+			LauncherMapList.SelectedItem = null;
+		}
+
+		private void NewModToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			using (var createMod = new CreateMod())
+			{
+				createMod.ShowDialog();
+			}
+		}
+
+		private void LauncherModZoneSourceCSVButton_Click(object sender, EventArgs e)
+		{
+			string str = Path.Combine(Launcher.GetModDirectory(LauncherModComboBox.SelectedItem.ToString()), "mod.csv");
+			if (!File.Exists(str)) File.Create(str).Close();
+			Process.Start(str);
+		}
+
+		private void LauncherModZoneSourceMissingAssetsButton_Click(object sender, EventArgs e)
+		{
+			string str = Path.Combine(Launcher.GetModDirectory(LauncherModComboBox.SelectedItem.ToString()), "missingasset.csv");
+			if (File.Exists(str))
+			{
+				Process.Start(str);
+			}
+			else
+			{
+				MessageBox.Show("Could not find missingasset.csv for mod.\nRun the mod with Developer mode to generate it.", "Error");
+			}
+		}
+
+		private void LauncherModBuildButton_Click(object sender, EventArgs e)
+		{
+			LauncherModComboBoxApplySettings();
+			UpdateModSettings();
+			ModBuildStart();
+		}
+
+		private void LauncherModFolderViewButton_Click(object sender, EventArgs e)
+		{
+			Process.Start(Launcher.GetModDirectory(LauncherModComboBox.SelectedItem.ToString()));
+		}
+
+		private void LauncherwikiToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			Process.Start("https://web.archive.org/web/20090228020203/http://wiki.treyarch.com/wiki/Main_Page");
+		}
+
+		private void LauncherSaveConsoleButton_Click(object sender, EventArgs e)
+		{
+			var saveFileDialog = new SaveFileDialog
+			{
+				Filter = "Rich Text File|*.rtf|Text File|*.txt|Log File|*.log",
+				Title = "Save Console Log",
+				DefaultExt = "txt",
+				AddExtension = true
+			};
+
+			if (saveFileDialog.ShowDialog() != DialogResult.OK || string.IsNullOrWhiteSpace(saveFileDialog.FileName))
+				return;
+
+			string filePath = saveFileDialog.FileName;
+			string extension = Path.GetExtension(filePath).ToLowerInvariant();
+
+			if (extension == ".rtf")
+				LauncherConsole.SaveFile(filePath, RichTextBoxStreamType.RichText);
+			else
+				File.WriteAllText(filePath, LauncherConsole.Text);
+		}
+
+		private void LauncherScrollBottomConsoleButton_Click(object sender, EventArgs e)
+		{
+			LauncherConsole.SelectionStart = LauncherConsole.Text.Length;
+			LauncherConsole.ScrollToCaret();
+		}
+
+		private void RunToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			string str1 = LauncherMapList.Items[LauncherMapListContextMenu_Map].ToString();
+			string str2 = "+set fs_game ";
+			string arguments = !LauncherModSpecificMapCheckBox.Checked ? "" : (LauncherModSpecificMapComboBox.Text.Length <= 0 || !LauncherModSpecificMapCheckBox.Checked ? "" : str2 + "\"mods/" + LauncherModSpecificMapComboBox.Text + "\" ");
+			if (str1.Length > 0)
+				arguments = arguments + "+devmap " + str1 + " ";
+			bool mpVersion = false;
+			if (LauncherRunGameMapNameTextBox.Text.Contains("mp_"))
+				mpVersion = true;
+
+			LaunchProcess(
+				Launcher.GetGameApplication(mpVersion),
+				arguments,
+				null,
+				false,
+				null);
+		}
+
+		private void EditToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			string str = LauncherMapList.Items[LauncherMapListContextMenu_Map].ToString();
+
+			LaunchProcess(
+				"CoDBORadiant",
+				"\"" + Path.Combine(Launcher.GetMapSourceDirectory(), str + ".map") + "\"",
+				null,
+				false,
+				null);
+		}
+
+		private void DeleteToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			string mapName = LauncherMapList.Items[LauncherMapListContextMenu_Map].ToString();
+			string[] filesToDelete = Launcher.GetMapFiles(mapName);
+
+			string confirmMessage = "The following files will be deleted:\n\n" + Launcher.StringArrayToString(filesToDelete);
+			DialogResult confirmation = MessageBox.Show(confirmMessage, "Confirm Deletion", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+			if (confirmation != DialogResult.Yes) return;
+
+			// Try to delete each file
+			foreach (string file in filesToDelete)
+				Utils.FileSystem.DeleteFile(file);
+
+			// Check if any files remain
+			string[] remainingFiles = Launcher.GetMapFiles(mapName);
+			if (remainingFiles.Length > 0)
+			{
+				string errorMessage = "Could not delete the following files:\n\n" + Launcher.StringArrayToString(remainingFiles);
+				MessageBox.Show(errorMessage, "Error Deleting Files", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+
+			// Now, update then enable the map list
+			UpdateMapList();
+			EnableMapList();
+		}
+
+		private void MayaExporterToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			Process.Start(Launcher.GetRootDirectory() + "/bin/maya/tools/Help/Model_Exporter.pdf");
+		}
+
+		private void MayaPluginSetupToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			if (MessageBox.Show("This will overwrite any existing Maya environment variable file and usersetup.\n     Continue?", "Maya Plugin Setup", MessageBoxButtons.YesNo) != DialogResult.Yes)
+				return;
+
+			string folderPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+			if (Directory.Exists(folderPath + "/maya"))
+			{
+				string str1 = folderPath + "/maya";
+				string str2;
+				bool flag;
+				if (!Directory.Exists(str1 + "/2009-x64"))
+				{
+					if (!Directory.Exists(str1 + "/2009"))
+					{
+						int num = (int)MessageBox.Show("Error: Couldn not find Maya 2009 folder.", "Maya Plugin Setup");
+						return;
+					}
+					str2 = str1 + "/2009";
+					flag = false;
+				}
+				else
+				{
+					str2 = str1 + "/2009-x64";
+					flag = true;
+				}
+				if (File.Exists(str2 + "/Maya.env"))
+					File.Delete(str2 + "/Maya.env");
+				string str3 = Path.Combine(Launcher.GetBinDirectory(), "maya/tools/");
+				string[] contents = new string[2]
+				{
+			  "MAYA_SCRIPT_PATH  = " + str3,
+			  "MAYA_PLUG_IN_PATH = " + str3
+				};
+				File.WriteAllLines(str2 + "/Maya.env", contents);
+				File.Copy(Path.Combine(Launcher.GetBinDirectory(), "maya/tools/usersetup.mel"), str2 + "/scripts/usersetup.mel", true);
+				File.SetAttributes(str2 + "/scripts/usersetup.mel", FileAttributes.Normal);
+				string str4 = "Maya2009_x86.zip";
+				if (flag)
+					str4 = "Maya2009_x64.zip";
+				LaunchProcess("7za", "e \"" + str4 + "\" -y", Path.Combine(Launcher.GetBinDirectory(), "maya/tools/"), false, (MainWindow.ProcessFinishedDelegate)null);
+				string str5 = "(32bit)";
+				if (flag)
+					str5 = "(64bit)";
+				int num1 = (int)MessageBox.Show("Success!\nCoDTools should now be in the menu strip the next time you launch Maya " + str5, "Maya Plugin Setup");
+			}
+			else
+			{
+				int num2 = (int)MessageBox.Show("Error: Maya MyDocuments folder doesn't exist, please run Maya at least once.", "Maya Plugin Setup");
+			}
+		}
+
+		private void LauncherTimer_Tick(object sender, EventArgs e)
+		{
+			if (consoleProcess != null)
+				LauncherProcessTimeElapsedTextBox.Text = (DateTime.Now - consoleProcessStartTime).ToString().Substring(0, 8);
+
+			string gameOptions = GetGameOptions();
+			if (!(LauncherRunGameCommandLineTextBox.Text != gameOptions))
+				return;
+
+			LauncherRunGameCommandLineTextBox.Text = gameOptions;
+		}
+
+		private void LauncherWarningsNumericUpDown_ValueChanged(object sender, EventArgs e)
+		{
+			if (Convert.ToInt32(LauncherWarningsCounter.Text) <= 0) return;
+
+			LauncherConsole.SelectionStart = (LauncherWarningsNumericUpDown.Value != 0M)
+				? FindLauncherConsoleText("WARNING:", LauncherConsole.SelectionStart + LauncherConsole.SelectionLength, LauncherConsole.Text.Length)
+				: FindLauncherConsoleText("WARNING:", 0, LauncherConsole.SelectionStart);
+		}
+
+		private void LauncherCompileLightsCheckBox_CheckedChanged(object sender, EventArgs e)
+		{
+			Launcher.mapSettings.SetDecimal("lightoptions_quality", 20M);
+		}
+
+		private void LauncherErrorsNumericUpDown_ValueChanged(object sender, EventArgs e)
+		{
+			if (Convert.ToInt32(LauncherErrorsCounter.Text) <= 0) return;
+
+			LauncherConsole.SelectionStart = (LauncherErrorsNumericUpDown.Value != 0M)
+				? FindLauncherConsoleText("ERROR:", LauncherConsole.SelectionStart + LauncherConsole.SelectionLength, LauncherConsole.Text.Length)
+				: FindLauncherConsoleText("ERROR:", 0, LauncherConsole.SelectionStart);
+		}
+
+		private void LauncherIwdFileTree_AfterCheck(object sender, TreeViewEventArgs e)
+		{
+			LauncherIwdFileTreeBeginUpdate();
+			RecursiveCheckNodesDown(e.Node.Nodes, e.Node.Checked);
+
+			if (e.Node.Checked)
+				RecursiveCheckNodesUp(e.Node.Parent, e.Node.Checked);
+
+			LauncherIwdFileTreeEndUpdate();
+		}
+
+		private void LauncherMapList_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			UpdateMapSettings();
+			EnableMapList();
+
+			LauncherRunGameMapNameTextBox.Text = (LauncherMapList.SelectedItem != null)
+				? LauncherMapList.SelectedItem.ToString()
+				: "";
+		}
+
+		private void LauncherMapList_MouseDown(object sender, MouseEventArgs e)
+		{
+			if (e.Button == MouseButtons.Right)
+			{
+				for (int i = 0; i < LauncherMapList.Items.Count; ++i)
+				{
+					if (LauncherMapList.GetItemRectangle(i).Contains(e.Location))
+						LauncherMapList_WaitingForMouseUp = i;
+				}
+			}
+		}
+
+		private void LauncherMapList_MouseUp(object sender, MouseEventArgs e)
+		{
+			if (e.Button == MouseButtons.Right && LauncherMapList_WaitingForMouseUp != -1)
+			{
+				for (int i = 0; i < LauncherMapList.Items.Count; ++i)
+				{
+					if (LauncherMapList.GetItemRectangle(i).Contains(e.Location) &&
+						LauncherMapList_WaitingForMouseUp == i)
+					{
+						LauncherMapListContextMenu_Map = i;
+						LauncherMapList.SelectedIndex = i;
+						LauncherMapListContextMenuStrip.Show(Cursor.Position);
+					}
+				}
+			}
+			LauncherMapList_WaitingForMouseUp = -1;
+		}
+
+		private void LauncherMapTypeList_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			UpdateMapList();
+		}
+
+		private void LauncherModComboBox_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			Launcher.launcherSettings.SetString("active_mod", LauncherModComboBox.Text);
+
+			LauncherModComboBoxApplySettings(load: false);
+			UpdateModSettings();
+			LauncherModComboBoxApplySettings(false);
+		}
+
+		private void LauncherModsDirectorySystemWatcher_Changed(object sender, FileSystemEventArgs e)
+		{
+			UpdateModList();
+		}
+
+		private void LauncherModsDirectorySystemWatcher_Created(object sender, FileSystemEventArgs e)
+		{
+			UpdateModList();
+		}
+
+		private void LauncherModsDirectorySystemWatcher_Deleted(object sender, FileSystemEventArgs e)
+		{
+			UpdateModList();
+		}
+
+		private void LauncherModsDirectorySystemWatcher_Renamed(object sender, RenamedEventArgs e)
+		{
+			UpdateModList();
+		}
+
+		private void LauncherProcessList_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			UpdateStopProcessButton();
+		}
+
+		private void LauncherRunGameButton_Click(object sender, EventArgs e)
+		{
+			string arguments = GetGameOptions();
+
+			if (LauncherRunGameDeveloperBox.Checked)
+				arguments += "+set developer 1 ";
+
+			if (LauncherRunGameLogfileBox.Checked)
+				arguments += "+set logfile 1 ";
+
+			if (LauncherRunGameMapNameTextBox.Text.Length > 0)
+				arguments = arguments + "+devmap " + LauncherRunGameMapNameTextBox.Text + " ";
+
+			bool mpVersion = false;
+
+			if (LauncherRunGameMapNameTextBox.Text.StartsWith("mp_") ||
+				LauncherRunGameModComboBox.Text.StartsWith("mp_"))
+				mpVersion = true;
+
+			if (mpVersion && LauncherRunGameCustomCommandLineMPCheckBox.Checked)
+				arguments += LauncherRunGameCustomCommandLineMPTextBox.Text;
+			else if (!mpVersion && LauncherRunGameCustomCommandLineCheckBox.Checked)
+				arguments += LauncherRunGameCustomCommandLineTextBox.Text;
+
+			LaunchProcess(
+				Launcher.GetGameApplication(mpVersion),
+				arguments,
+				null,
+				false,
+				null);
+		}
+
+		private void LauncherRunGameCustomCommandLineTextBox_TextChanged(object sender, EventArgs e)
+		{
+		}
+
+		private void LauncherRunGameCustomCommandLineTextBox_Validating(
+		  object sender,
+		  CancelEventArgs e)
+		{
+		}
+
+		private void LauncherModSpecificMapCheckBox_CheckedChanged(object sender, EventArgs e)
+		{
+			LauncherModSpecificMapComboBox.Enabled = LauncherModSpecificMapCheckBox.Checked;
+		}
+
+		private void ExporterTutorialToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			Process.Start(Launcher.GetRootDirectory() + "/bin/maya/tutorial/trashcan_metal/Treyarch_trashcan_metal_directions01sm.pdf");
+		}
+
+		private void GameDirToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			Process.Start(Launcher.GetRootDirectory());
+		}
+		#endregion
+
+		private bool IsMP()
+		{
+			return Launcher.IsMP(mapName);
 		}
 
 		private void LauncherIwdFileTreeBeginUpdate()
@@ -3129,86 +3480,6 @@ namespace Launcher
 		  LauncherIwdFileTree.EndUpdate();
 		}
 
-		private void LauncherMapFilesSystemWatcher_Changed(object sender, FileSystemEventArgs e)
-		{
-		  UpdateMapList();
-		}
-
-		private void LauncherMapFilesSystemWatcher_Created(object sender, FileSystemEventArgs e)
-		{
-		  UpdateMapList();
-		}
-
-		private void LauncherMapFilesSystemWatcher_Deleted(object sender, FileSystemEventArgs e)
-		{
-		  UpdateMapList();
-		}
-
-		private void LauncherMapFilesSystemWatcher_Renamed(object sender, RenamedEventArgs e)
-		{
-		  UpdateMapList();
-		}
-
-		private void LauncherMapList_DoubleClick(object sender, EventArgs e)
-		{
-		  LauncherMapList.SelectedItem = (object) null;
-		}
-
-		private void LauncherMapList_SelectedIndexChanged(object sender, EventArgs e)
-		{
-		  UpdateMapSettings();
-		  EnableMapList();
-		  LauncherRunGameMapNameTextBox.Text = LauncherMapList.SelectedItem != null ? LauncherMapList.SelectedItem.ToString() : "";
-		}
-
-		private void LauncherMapList_MouseDown(object sender, MouseEventArgs e)
-		{
-		  if (e.Button != MouseButtons.Right)
-			return;
-		  for (int index = 0; index < LauncherMapList.Items.Count; ++index)
-		  {
-			if (LauncherMapList.GetItemRectangle(index).Contains(e.Location))
-			  LauncherMapList_WaitingForMouseUp = index;
-		  }
-		}
-
-		private void LauncherMapList_MouseUp(object sender, MouseEventArgs e)
-		{
-		  if (e.Button == MouseButtons.Right && LauncherMapList_WaitingForMouseUp != -1)
-		  {
-			for (int index = 0; index < LauncherMapList.Items.Count; ++index)
-			{
-			  if (LauncherMapList.GetItemRectangle(index).Contains(e.Location) && LauncherMapList_WaitingForMouseUp == index)
-			  {
-				LauncherMapListContextMenu_Map = index;
-				LauncherMapList.SelectedIndex = index;
-				LauncherMapListContextMenuStrip.Show(Cursor.Position);
-			  }
-			}
-		  }
-		  LauncherMapList_WaitingForMouseUp = -1;
-		}
-
-		private void LauncherMapTypeList_SelectedIndexChanged(object sender, EventArgs e)
-		{
-		  UpdateMapList();
-		}
-
-		private void LauncherModBuildButton_Click(object sender, EventArgs e)
-		{
-		  LauncherModComboBoxApplySettings();
-		  UpdateModSettings();
-		  ModBuildStart();
-		}
-
-		private void LauncherModComboBox_SelectedIndexChanged(object sender, EventArgs e)
-		{
-		  Launcher.launcherSettings.SetString("active_mod", LauncherModComboBox.Text);
-		  LauncherModComboBoxApplySettings(load: false);
-		  UpdateModSettings();
-		  LauncherModComboBoxApplySettings(false);
-		}
-
 		private void LauncherModComboBoxApplySettings(bool save = true, bool load = true)
 		{
 		  bool flag = LauncherModComboBox.SelectedItem != null;
@@ -3218,174 +3489,16 @@ namespace Launcher
 		  LauncherIwdFileGroupBox.Enabled = flag;
 		  LauncherIwdFileTreeBeginUpdate();
 		  if (save && modName != null && Directory.Exists(Launcher.GetModDirectory(modName, false)))
-			Launcher.SaveTextFile(Path.Combine(Launcher.GetModDirectory(modName), modName + ".files"), Launcher.HashTableToStringArray(TreeViewToHashTable(LauncherIwdFileTree.Nodes)));
+			Utils.FileSystem.SaveTextFile(Path.Combine(Launcher.GetModDirectory(modName), modName + ".files"), Launcher.HashTableToStringArray(TreeViewToHashTable(LauncherIwdFileTree.Nodes)));
 		  if (load && LauncherModComboBox.SelectedItem != null)
 		  {
 			modName = LauncherModComboBox.SelectedItem.ToString();
 			string textFile = Path.Combine(Launcher.GetModDirectory(modName), modName + ".files");
 			LauncherIwdFileTree.Nodes.Clear();
-			AddFilesToTreeView(Launcher.GetModDirectory(modName), LauncherIwdFileTree.Nodes, true);
-			HashTableToTreeView(Launcher.StringArrayToHashTable(Launcher.LoadTextFile(textFile)), LauncherIwdFileTree.Nodes);
+			Utils.FileSystem.AddFilesToTreeView(Launcher.GetModDirectory(modName), LauncherIwdFileTree.Nodes, true);
+			HashTableToTreeView(Launcher.StringArrayToHashTable(Utils.FileSystem.LoadTextFile(textFile)), LauncherIwdFileTree.Nodes);
 		  }
 		  LauncherIwdFileTreeEndUpdate();
-		}
-
-		private void LauncherModFolderViewButton_Click(object sender, EventArgs e)
-		{
-		  Process.Start(Launcher.GetModDirectory(LauncherModComboBox.SelectedItem.ToString()));
-		}
-
-		private void LauncherModsDirectorySystemWatcher_Changed(object sender, FileSystemEventArgs e)
-		{
-		  UpdateModList();
-		}
-
-		private void LauncherModsDirectorySystemWatcher_Created(object sender, FileSystemEventArgs e)
-		{
-		  UpdateModList();
-		}
-
-		private void LauncherModsDirectorySystemWatcher_Deleted(object sender, FileSystemEventArgs e)
-		{
-		  UpdateModList();
-		}
-
-		private void LauncherModsDirectorySystemWatcher_Renamed(object sender, RenamedEventArgs e)
-		{
-		  UpdateModList();
-		}
-
-		private void LauncherModZoneSourceCSVButton_Click(object sender, EventArgs e)
-		{
-		  string str = Path.Combine(Launcher.GetModDirectory(LauncherModComboBox.SelectedItem.ToString()), "mod.csv");
-		  if (!File.Exists(str))
-			File.Create(str).Close();
-		  Process.Start(str);
-		}
-
-		private void LauncherModZoneSourceMissingAssetsButton_Click(object sender, EventArgs e)
-		{
-		  string str = Path.Combine(Launcher.GetModDirectory(LauncherModComboBox.SelectedItem.ToString()), "missingasset.csv");
-		  if (File.Exists(str))
-		  {
-			Process.Start(str);
-		  }
-		  else
-		  {
-			int num = (int) MessageBox.Show("Could not find missingasset.csv for mod.\nRun the mod with Developer mode to generate it.", "Error");
-		  }
-		}
-
-		private void LaunchernewMapToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-		  if (new CreateMap().ShowDialog() != DialogResult.OK)
-			return;
-		  UpdateMapList();
-		  EnableMapList();
-		}
-
-		private void LauncherProcessList_SelectedIndexChanged(object sender, EventArgs e)
-		{
-		  UpdateStopProcessButton();
-		}
-
-		private void LauncherRunGameButton_Click(object sender, EventArgs e)
-		{
-		  foreach (ComboBox dvarComboBox in dvarComboBoxes)
-		  {
-			string str1 = dvarComboBox.Text.Trim();
-			if (str1 != "")
-			{
-			  foreach (string str2 in dvarComboBox.Items)
-			  {
-				if (!(str1.ToLower() != str2.ToLower()))
-				{
-				  str1 = "";
-				  break;
-				}
-			  }
-			}
-			if (str1 != "")
-			  dvarComboBox.Items.Add((object) dvarComboBox.Text);
-		  }
-		  string arguments = GetGameOptions();
-		  if (LauncherRunGameDeveloperBox.Checked)
-			arguments += "+set developer 1 ";
-		  if (LauncherRunGameLogfileBox.Checked)
-			arguments += "+set logfile 1 ";
-		  if (LauncherRunGameMapNameTextBox.Text.Length > 0)
-			arguments = arguments + "+devmap " + LauncherRunGameMapNameTextBox.Text + " ";
-		  bool mpVersion = false;
-		  if (LauncherRunGameMapNameTextBox.Text.StartsWith("mp_") || LauncherRunGameModComboBox.Text.StartsWith("mp_"))
-			mpVersion = true;
-		  if (mpVersion && LauncherRunGameCustomCommandLineMPCheckBox.Checked)
-			arguments += LauncherRunGameCustomCommandLineMPTextBox.Text;
-		  else if (!mpVersion && LauncherRunGameCustomCommandLineCheckBox.Checked)
-			arguments += LauncherRunGameCustomCommandLineTextBox.Text;
-		  LaunchProcess(Launcher.GetGameApplication(mpVersion), arguments, (string) null, false, (MainWindow.ProcessFinishedDelegate) null);
-		}
-
-		private void LauncherRunGameCustomCommandLineTextBox_TextChanged(object sender, EventArgs e)
-		{
-		}
-
-		private void LauncherRunGameCustomCommandLineTextBox_Validating(
-		  object sender,
-		  CancelEventArgs e)
-		{
-		}
-
-		private void LauncherSaveConsoleButton_Click(object sender, EventArgs e)
-		{
-		  SaveFileDialog saveFileDialog1 = new SaveFileDialog();
-		  saveFileDialog1.Filter = "Rich Text File|*.rtf|Text File|*.txt|Log File|*.log";
-		  saveFileDialog1.Title = "Save console log";
-		  SaveFileDialog saveFileDialog2 = saveFileDialog1;
-		  int num = (int) saveFileDialog2.ShowDialog();
-		  if (!(saveFileDialog2.FileName != ""))
-			return;
-		  if (Path.GetExtension(saveFileDialog2.FileName) == ".rtf")
-			LauncherConsole.SaveFile(saveFileDialog2.FileName, RichTextBoxStreamType.RichText);
-		  else
-			File.WriteAllText(saveFileDialog2.FileName, LauncherConsole.Text);
-		}
-
-		private void LauncherscriptToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-		  Process.Start(Launcher.GetRootDirectory() + "/docs/script_docs/scriptFunctions/index.htm");
-		}
-
-		private void LauncherScrollBottomConsoleButton_Click(object sender, EventArgs e)
-		{
-		  LauncherConsole.SelectionStart = LauncherConsole.Text.Length;
-		  LauncherConsole.ScrollToCaret();
-		}
-
-		private void LauncherTimer_Tick(object sender, EventArgs e)
-		{
-		  if (consoleProcess != null)
-			LauncherProcessTimeElapsedTextBox.Text = (DateTime.Now - consoleProcessStartTime).ToString().Substring(0, 8);
-		  string gameOptions = GetGameOptions();
-		  if (!(LauncherRunGameCommandLineTextBox.Text != gameOptions))
-			return;
-		  LauncherRunGameCommandLineTextBox.Text = gameOptions;
-		}
-
-		private void LauncherWarningsNumericUpDown_ValueChanged(object sender, EventArgs e)
-		{
-		  if (Convert.ToInt32(LauncherWarningsCounter.Text) <= 0)
-			return;
-		  LauncherConsole.SelectionStart = LauncherWarningsNumericUpDown.Value != 0M ? FindLauncherConsoleText("WARNING:", LauncherConsole.SelectionStart + LauncherConsole.SelectionLength, LauncherConsole.Text.Length) : FindLauncherConsoleText("WARNING:", 0, LauncherConsole.SelectionStart);
-		}
-
-		private void LauncherWikiLabel_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-		{
-		  Process.Start("http://wiki.treyarch.com");
-		}
-
-		private void LauncherwikiToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-		  Process.Start("http://wiki.treyarch.com");
 		}
 
 		private void LaunchProcess(
@@ -3513,66 +3626,10 @@ namespace Launcher
 		  LaunchProcessHelper(shouldRun, nextStage, lastProcess, processName, processOptions, (string) null);
 		}
 
-		private void mayaExporterToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-		  Process.Start(Launcher.GetRootDirectory() + "/bin/maya/tools/Help/Model_Exporter.pdf");
-		}
-
-		private void mayaPluginSetupToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-		  if (MessageBox.Show("This will overwrite any existing Maya environment variable file and usersetup.\n     Continue?", "Maya Plugin Setup", MessageBoxButtons.YesNo) != DialogResult.Yes)
-			return;
-		  string folderPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-		  if (Directory.Exists(folderPath + "/maya"))
-		  {
-			string str1 = folderPath + "/maya";
-			string str2;
-			bool flag;
-			if (!Directory.Exists(str1 + "/2009-x64"))
-			{
-			  if (!Directory.Exists(str1 + "/2009"))
-			  {
-				int num = (int) MessageBox.Show("Error: Couldn not find Maya 2009 folder.", "Maya Plugin Setup");
-				return;
-			  }
-			  str2 = str1 + "/2009";
-			  flag = false;
-			}
-			else
-			{
-			  str2 = str1 + "/2009-x64";
-			  flag = true;
-			}
-			if (File.Exists(str2 + "/Maya.env"))
-			  File.Delete(str2 + "/Maya.env");
-			string str3 = Path.Combine(Launcher.GetBinDirectory(), "maya/tools/");
-			string[] contents = new string[2]
-			{
-			  "MAYA_SCRIPT_PATH  = " + str3,
-			  "MAYA_PLUG_IN_PATH = " + str3
-			};
-			File.WriteAllLines(str2 + "/Maya.env", contents);
-			File.Copy(Path.Combine(Launcher.GetBinDirectory(), "maya/tools/usersetup.mel"), str2 + "/scripts/usersetup.mel", true);
-			File.SetAttributes(str2 + "/scripts/usersetup.mel", FileAttributes.Normal);
-			string str4 = "Maya2009_x86.zip";
-			if (flag)
-			  str4 = "Maya2009_x64.zip";
-			LaunchProcess("7za", "e \"" + str4 + "\" -y", Path.Combine(Launcher.GetBinDirectory(), "maya/tools/"), false, (MainWindow.ProcessFinishedDelegate) null);
-			string str5 = "(32bit)";
-			if (flag)
-			  str5 = "(64bit)";
-			int num1 = (int) MessageBox.Show("Success!\nCoDTools should now be in the menu strip the next time you launch Maya " + str5, "Maya Plugin Setup");
-		  }
-		  else
-		  {
-			int num2 = (int) MessageBox.Show("Error: Maya MyDocuments folder doesn't exist, please run Maya at least once.", "Maya Plugin Setup");
-		  }
-		}
-
 		private void ModBuildFastFileDelegate(Process lastProcess)
 		{
 		  if (LauncherModBuildFastFilesCheckBox.Checked)
-			Launcher.CopyFileSmart(Path.Combine(Launcher.GetModDirectory(modName), "mod.csv"), Path.Combine(Launcher.GetZoneSourceDirectory(), "mod.csv"));
+				Utils.FileSystem.CopyFileSmart(Path.Combine(Launcher.GetModDirectory(modName), "mod.csv"), Path.Combine(Launcher.GetZoneSourceDirectory(), "mod.csv"));
 		  string str = "";
 		  if (LauncherModBuildLinkerOptionsTextBox.Text != null)
 			str = LauncherModBuildLinkerOptionsTextBox.Text;
@@ -3600,7 +3657,7 @@ namespace Launcher
 		{
 		  string fileName = Path.Combine(Launcher.GetModDirectory(modName), modName + ".iwd");
 		  if (LauncherModBuildIwdFileCheckBox.Checked)
-			Launcher.DeleteFile(fileName, false);
+				Utils.FileSystem.DeleteFile(fileName, false);
 		  bool shouldRun = LauncherModBuildIwdFileCheckBox.Checked;
 		  MainWindow.ProcessFinishedDelegate nextStage = new MainWindow.ProcessFinishedDelegate(ModBuildFinishedDelegate);
 		  string[] strArray = new string[5]
@@ -3617,7 +3674,7 @@ namespace Launcher
 		private void ModBuildMoveModFastFileDelegate(Process lastProcess)
 		{
 		  if (LauncherModBuildFastFilesCheckBox.Checked)
-			Launcher.MoveFile(Path.Combine(Launcher.GetZoneDirectory(), "mod.ff"), Path.Combine(Launcher.GetModDirectory(modName), "mod.ff"));
+				Utils.FileSystem.MoveFile(Path.Combine(Launcher.GetZoneDirectory(), "mod.ff"), Path.Combine(Launcher.GetModDirectory(modName), "mod.ff"));
 		  ModBuildIwdFileDelegate(lastProcess);
 		}
 
@@ -3630,11 +3687,6 @@ namespace Launcher
 		{
 		  EnableControls(false);
 		  ModBuildSoundDelegate((Process) null);
-		}
-
-		private void newModToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-		  int num = (int) new CreateMod().ShowDialog();
 		}
 
 		private void RecursiveCheckNodesDown(TreeNodeCollection tree, bool checkedFlag)
@@ -3686,10 +3738,6 @@ namespace Launcher
 		private void UpdateConsoleColor()
 		{
 		  LauncherConsole.BackColor = consoleProcess == null ? Color.Black : Color.Black;
-		}
-
-		private void UpdateDVars()
-		{
 		}
 
 		private void UpdateMapList()
@@ -3817,10 +3865,6 @@ namespace Launcher
 		  }));
 		}
 
-		private void UpdateRunGameCommandLine()
-		{
-		}
-
 		private void UpdateStopProcessButton()
 		{
 		  int selectedIndex = LauncherProcessList.SelectedIndex;
@@ -3839,91 +3883,55 @@ namespace Launcher
 		  }
 		}
 
-		private void utilityDocsToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-		  Process.Start(Launcher.GetRootDirectory() + "/docs/script_docs/UtilityFunctions/index.htm");
-		}
-
 		private void WriteConsole(string s, bool isStdError)
 		{
-		  if (s == null)
-			return;
-		  long ticks = DateTime.Now.Ticks;
-		  bool flag2 = ticks - consoleTicksWhenLastFocus > 10000000L;
-		  if (flag2)
-			consoleTicksWhenLastFocus = ticks;
-		  if (s.Contains("Setting breakpad minidump AppID = ") || s.Contains("Steam_SetMinidumpSteamID:  Caching Steam ID:  "))
-			s = "";
-		  else
-			LauncherConsole.Invoke((MethodInvoker) (() =>
+			if (s == null) return;
+
+			long ticks = DateTime.Now.Ticks;
+			bool flag2 = ticks - consoleTicksWhenLastFocus > 10000000L;
+
+			if (flag2)
+				consoleTicksWhenLastFocus = ticks;
+
+			if (s.Contains("Setting breakpad minidump AppID = ") ||
+				s.Contains("Steam_SetMinidumpSteamID:  Caching Steam ID:  "))
+				s = "";
+			else
 			{
-			  Color selectionColor = LauncherConsole.SelectionColor;
-			  Font selectionFont = LauncherConsole.SelectionFont;
-			  bool flag1 = isStdError || s.Contains("ERROR:");
-			  bool flag3 = s.Contains("WARNING:");
-			  if (flag1 | flag3)
-			  {
-				if (!flag1)
+				LauncherConsole.Invoke((MethodInvoker)(() =>
 				{
-						LauncherWarningsPictureBox.BackgroundImage = Resources.Warning;
-						LauncherWarningsCounter.Text = Convert.ToString(Convert.ToInt32(LauncherWarningsCounter.Text) + 1);
-				}
-				else
-				{
-						LauncherErrorsPictureBox.BackgroundImage = Resources.error;
-						LauncherErrorsCounter.Text = Convert.ToString(Convert.ToInt32(LauncherErrorsCounter.Text) + 1);
-				}
-				LauncherConsole.SelectionFont = new Font(LauncherConsole.SelectionFont, FontStyle.Bold);
-				LauncherConsole.SelectionColor = flag1 ? Color.Red : Color.Green;
-			  }
-			  LauncherConsole.AppendText(s + "\n");
-			  if (flag2)
-				LauncherConsole.Focus();
-			  if (!(flag1 | flag3))
-				return;
-			  LauncherConsole.SelectionColor = selectionColor;
-			  LauncherConsole.SelectionFont = selectionFont;
-			}));
-		}
+					Color selectionColor = LauncherConsole.SelectionColor;
+					Font selectionFont = LauncherConsole.SelectionFont;
+					bool flag1 = isStdError || s.Contains("ERROR:");
+					bool flag3 = s.Contains("WARNING:");
 
-		private event ProcessFinishedDelegate processFinishedDelegate;
+					if (flag1 | flag3)
+					{
+						if (!flag1)
+						{
+							LauncherWarningsPictureBox.BackgroundImage = Resources.Warning;
+							LauncherWarningsCounter.Text = Convert.ToString(Convert.ToInt32(LauncherWarningsCounter.Text) + 1);
+						}
+						else
+						{
+							LauncherErrorsPictureBox.BackgroundImage = Resources.error;
+							LauncherErrorsCounter.Text = Convert.ToString(Convert.ToInt32(LauncherErrorsCounter.Text) + 1);
+						}
 
-		private void RunToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-			string str1 = LauncherMapList.Items[LauncherMapListContextMenu_Map].ToString();
-			string str2 = "+set fs_game ";
-			string arguments = !LauncherModSpecificMapCheckBox.Checked ? "" : (LauncherModSpecificMapComboBox.Text.Length <= 0 || !LauncherModSpecificMapCheckBox.Checked ? "" : str2 + "\"mods/" + LauncherModSpecificMapComboBox.Text + "\" ");
-			if (str1.Length > 0)
-				arguments = arguments + "+devmap " + str1 + " ";
-			bool mpVersion = false;
-			if (LauncherRunGameMapNameTextBox.Text.Contains("mp_"))
-				mpVersion = true;
-			LaunchProcess(Launcher.GetGameApplication(mpVersion), arguments, (string) null, false, (MainWindow.ProcessFinishedDelegate) null);
-		}
+						LauncherConsole.SelectionFont = new Font(LauncherConsole.SelectionFont, FontStyle.Bold);
+						LauncherConsole.SelectionColor = flag1 ? Color.Red : Color.Green;
+					}
 
-		private void EditToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-			string str = LauncherMapList.Items[LauncherMapListContextMenu_Map].ToString();
-			LaunchProcess("CoDBORadiant", "\"" + Path.Combine(Launcher.GetMapSourceDirectory(), str + ".map") + "\"", (string) null, false, (MainWindow.ProcessFinishedDelegate) null);
-		}
+					LauncherConsole.AppendText(s + "\n");
 
-		private void DeleteToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-			string mapName = LauncherMapList.Items[LauncherMapListContextMenu_Map].ToString();
-			string[] mapFiles1 = Launcher.GetMapFiles(mapName);
-			if (DialogResult.Yes != MessageBox.Show("The following files would be deleted:\n\n" + Launcher.StringArrayToString(mapFiles1), "Are you sure you want to delete these files?", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation))
-				return;
-			foreach (string fileName in mapFiles1)
-				Launcher.DeleteFile(fileName);
-			string[] mapFiles2 = Launcher.GetMapFiles(mapName);
-			if (mapFiles2.Length != 0)
-			{
-				int num = (int) MessageBox.Show("Could not delete the following files:\n\n" + Launcher.StringArrayToString(mapFiles2), "Error deleting files", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+					if (flag2)
+						LauncherConsole.Focus();
+					if (!(flag1 | flag3))
+						return;
+					LauncherConsole.SelectionColor = selectionColor;
+					LauncherConsole.SelectionFont = selectionFont;
+				}));
 			}
-			UpdateMapList();
-			EnableMapList();
 		}
-
-		internal delegate void ProcessFinishedDelegate(Process lastProcess);
 	}
 }

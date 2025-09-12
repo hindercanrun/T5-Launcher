@@ -7,7 +7,7 @@ namespace Launcher
 {
 	internal class BspOptions : Form
 	{
-		private readonly IContainer components;
+		private readonly IContainer components = null;
 		private GroupBox BspOptionsGroupBox;
 		private Label BspOptionsExtraOptionsLabelText;
 		private CheckBox BspOptionsDebugLightsCheckBox;
@@ -25,13 +25,6 @@ namespace Launcher
 		internal BspOptions()
 		{
 			InitializeComponent();
-		}
-
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && components != null)
-				components.Dispose();
-			base.Dispose(disposing);
 		}
 
 		private void InitializeComponent()
@@ -187,7 +180,7 @@ namespace Launcher
 			ShowInTaskbar = false;
 			StartPosition = FormStartPosition.CenterParent;
 			Text = "Advanced Users Options";
-			Load += new EventHandler(BspOptionsForm_Load);
+			Load += new EventHandler(BspOptions_Load);
 			BspOptionsGroupBox.ResumeLayout(false);
 			BspOptionsGroupBox.PerformLayout();
 			BspOptionsBlockSizeNumericUpDown.EndInit();
@@ -195,18 +188,39 @@ namespace Launcher
 			ResumeLayout(false);
 		}
 
-		private void BspOptionsBlockSizeCheckBox_CheckedChanged(object sender, EventArgs e)
+		protected override void Dispose(bool disposing)
 		{
-			BspOptionsFormUpdate();
+			if (disposing && components != null) components.Dispose();
+			base.Dispose(disposing);
 		}
 
-		private void BspOptionsButtonCancel_Click(object sender, EventArgs e)
+		private void BspOptions_Load(object sender, EventArgs e)
 		{
-			Close();
+			BspOptionsOnlyEntsCheckBox.Checked = Launcher.mapSettings.GetBoolean("bspoptions_onlyents");
+			BspOptionsBlockSizeCheckBox.Checked = Launcher.mapSettings.GetBoolean("bspoptions_blocksize");
+			BspOptionsSampleScaleCheckBox.Checked = Launcher.mapSettings.GetBoolean("bspoptions_samplescale");
+			BspOptionsDebugLightsCheckBox.Checked = Launcher.mapSettings.GetBoolean("bspoptions_debuglightmaps");
+
+			Launcher.SetNumericUpDownValue(BspOptionsBlockSizeNumericUpDown, Launcher.mapSettings.GetDecimal("bspoptions_blocksize_val"));
+			Launcher.SetNumericUpDownValue(BspOptionsSampleScaleNumericUpDown, Launcher.mapSettings.GetDecimal("bspoptions_samplescale_val"));
+
+			BspOptionsLeakTest.Checked = Launcher.mapSettings.GetBoolean("bspoptions_leaktest", true);
+			BspOptionsDebugProbes.Checked = Launcher.mapSettings.GetBoolean("bspoptions_debugprobes");
+			BspOptionsExtraOptionsTextBox.Text = Launcher.mapSettings.GetString("bspoptions_extraoptions");
+
+			// Update the form
+			BspOptionsUpdate();
+		}
+
+		private void BspOptionsUpdate()
+		{
+			BspOptionsBlockSizeNumericUpDown.Enabled = BspOptionsBlockSizeCheckBox.Checked;
+			BspOptionsSampleScaleNumericUpDown.Enabled = BspOptionsSampleScaleCheckBox.Checked;
 		}
 
 		private void BspOptionsButtonOK_Click(object sender, EventArgs e)
 		{
+			// Set the settings
 			Launcher.mapSettings.SetBoolean("bspoptions_onlyents", BspOptionsOnlyEntsCheckBox.Checked);
 			Launcher.mapSettings.SetBoolean("bspoptions_blocksize", BspOptionsBlockSizeCheckBox.Checked);
 			Launcher.mapSettings.SetBoolean("bspoptions_samplescale", BspOptionsSampleScaleCheckBox.Checked);
@@ -214,33 +228,26 @@ namespace Launcher
 			Launcher.mapSettings.SetDecimal("bspoptions_blocksize_val", BspOptionsBlockSizeNumericUpDown.Value);
 			Launcher.mapSettings.SetDecimal("bspoptions_samplescale_val", BspOptionsSampleScaleNumericUpDown.Value);
 			Launcher.mapSettings.SetBoolean("bspoptions_leaktest", BspOptionsLeakTest.Checked);
-			Launcher.mapSettings.SetBoolean("bspoptions_debugprobes", BspOptionsDebugProbes.Checked); Launcher.mapSettings.SetString("bspoptions_extraoptions", BspOptionsExtraOptionsTextBox.Text);
+			Launcher.mapSettings.SetBoolean("bspoptions_debugprobes", BspOptionsDebugProbes.Checked);
+			Launcher.mapSettings.SetString("bspoptions_extraoptions", BspOptionsExtraOptionsTextBox.Text);
+
+			// Now close the pop-up
 			Close();
 		}
 
-		private void BspOptionsForm_Load(object sender, EventArgs e)
+		private void BspOptionsButtonCancel_Click(object sender, EventArgs e)
 		{
-			BspOptionsOnlyEntsCheckBox.Checked = Launcher.mapSettings.GetBoolean("bspoptions_onlyents");
-			BspOptionsBlockSizeCheckBox.Checked = Launcher.mapSettings.GetBoolean("bspoptions_blocksize");
-			BspOptionsSampleScaleCheckBox.Checked = Launcher.mapSettings.GetBoolean("bspoptions_samplescale");
-			BspOptionsDebugLightsCheckBox.Checked = Launcher.mapSettings.GetBoolean("bspoptions_debuglightmaps");
-			Launcher.SetNumericUpDownValue(BspOptionsBlockSizeNumericUpDown, Launcher.mapSettings.GetDecimal("bspoptions_blocksize_val"));
-			Launcher.SetNumericUpDownValue(BspOptionsSampleScaleNumericUpDown, Launcher.mapSettings.GetDecimal("bspoptions_samplescale_val"));
-			BspOptionsLeakTest.Checked = Launcher.mapSettings.GetBoolean("bspoptions_leaktest", true);
-			BspOptionsDebugProbes.Checked = Launcher.mapSettings.GetBoolean("bspoptions_debugprobes");
-			BspOptionsExtraOptionsTextBox.Text = Launcher.mapSettings.GetString("bspoptions_extraoptions");
-			BspOptionsFormUpdate();
+			Close();
 		}
 
-		private void BspOptionsFormUpdate()
+		private void BspOptionsBlockSizeCheckBox_CheckedChanged(object sender, EventArgs e)
 		{
-			BspOptionsBlockSizeNumericUpDown.Enabled = BspOptionsBlockSizeCheckBox.Checked;
-			BspOptionsSampleScaleNumericUpDown.Enabled = BspOptionsSampleScaleCheckBox.Checked;
+			BspOptionsUpdate();
 		}
 
 		private void BspOptionsSampleScaleCheckBox_CheckedChanged(object sender, EventArgs e)
 		{
-			BspOptionsFormUpdate();
+			BspOptionsUpdate();
 		}
 	}
 }
